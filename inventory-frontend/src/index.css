@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+
+:root {
+  /* backgrounds */
+  --bg: #080d0a; /* solid obsidian black-green */
+  --card-bg: #0e1612; /* solid elevated dark slate-green */
+  --input-bg: #15221b; /* solid deep emerald input background */
+  --sidebar-bg: #0b130f; /* solid deep dark green sidebar */
+  --sidebar-border: #193528;
+  --sidebar-active: #123d2b;
+  --sidebar-hover: #10261d;
+  --sidebar-text: #a7c7b8;
+  --sidebar-muted: #6f9d87;
+
+  /* text */
+  --text: #b3c5bd; /* high-readability emerald-silver */
+  --text-h: #ecfdf5; /* high-contrast heading green */
+
+  /* borders */
+  --border: #1b2e24; /* solid dark border */
+
+  /* accent green */
+  --accent: #10b981;
+  --accent-text: #052e16;
+
+  /* muted */
+  --muted: #6b8477;
+
+  /* effects */
+  --code-bg: #182820;
+  --shadow: rgba(0, 0, 0, 0.35) 0 10px 30px -5px;
+
+  /* fonts */
+  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  --heading: system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+}
+
+html.light {
+  --bg: #f4faf6; /* clean crisp white-green */
+  --card-bg: #ffffff;
+  --input-bg: #edf7f1;
+  --sidebar-bg: #e8f5e9; /* custom light green sidebar container */
+  --sidebar-border: #c4e7cd;
+  --sidebar-active: #c7efd3;
+  --sidebar-hover: #d8f3df;
+  --sidebar-text: #255c38;
+  --sidebar-muted: #5d8e6d;
+
+  --text: #1b432a;
+  --text-h: #092c18;
+
+  --border: #d2ecd9;
+
+  --accent: #16a34a;
+  --accent-text: #ffffff;
+
+  --muted: #537a61;
+
+  --code-bg: #edf7f1;
+
+  --shadow:
+    rgba(0, 0, 0, 0.04) 0 8px 24px -4px,
+    rgba(0, 0, 0, 0.02) 0 2px 8px -1px;
+}
+
+
+.auth-theme {
+  --bg: #080d0a;
+  --card-bg: #0e1612;
+  --input-bg: #15221b;
+
+  --text: #b3c5bd;
+  --text-h: #ecfdf5;
+
+  --border: #1b2e24;
+
+  --accent: #10b981;
+  --accent-text: #052e16;
+
+  --muted: #6b8477;
+
+  --code-bg: #182820;
+
+  --shadow: rgba(0, 0, 0, 0.35) 0 10px 30px -5px;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, h4, p, span, label, input {
+  color: inherit;
+}
+
+a, li {
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  color: var(--text-h);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+}
+
+select {
+  color: var(--text-h);
+  background-color: var(--input-bg);
+  border: 1px solid var(--border);
+}
+
+select option {
+  background-color: var(--bg);
+  color: var(--text-h);
+}
+
+
+button svg {
+  color: currentColor;
+}
+
+code,
+.counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 6px;
+  color: var(--text-h);
+  background: var(--code-bg);
+  padding: 4px 8px;
+}
