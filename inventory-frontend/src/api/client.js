@@ -2,7 +2,7 @@ import axios from "axios";
 import { clearRequestCache } from "./requestCache";
 import { clearPageCache } from "../store/pageCache";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://saristore-ims-backend.onrender.com";
 const API_TIMEOUT_MS = 30000;
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
