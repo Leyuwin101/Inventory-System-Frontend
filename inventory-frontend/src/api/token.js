@@ -18,12 +18,14 @@ export const getToken = () => {
  * @param {string} refreshToken JWT refresh token
  */
 export const setTokens = (accessToken, refreshToken) => {
-    if (!accessToken || !refreshToken) {
-        throw new Error("Cannot store missing auth tokens");
+    if (!accessToken) {
+        throw new Error("Cannot store missing access token");
     }
 
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    if (refreshToken) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
 }
 
 /**

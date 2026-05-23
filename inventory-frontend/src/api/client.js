@@ -13,6 +13,7 @@ export const api = axios.create({
     headers: {
         "Content-Type": "application/json",
     },
+    withCredentials: true,
     timeout: API_TIMEOUT_MS,
 });
 
@@ -21,6 +22,7 @@ const refreshClient = axios.create({
     headers: {
         "Content-Type": "application/json",
     },
+    withCredentials: true,
     timeout: API_TIMEOUT_MS,
 });
 
@@ -32,13 +34,16 @@ const getAccessToken = () => localStorage.getItem(ACCESS_TOKEN_KEY);
 const getRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY);
 
 const persistTokens = ({ accessToken, refreshToken }) => {
-    if (!accessToken || !refreshToken) {
-        throw new Error("Refresh response did not include tokens");
+    if (!accessToken) {
+        throw new Error("Refresh response did not include an access token");
     }
 
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    if (refreshToken) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
     api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+    logoutInProgress = false;
 };
 
 const clearSession = () => {
@@ -80,12 +85,8 @@ const isAuthEndpoint = (url = "") => (
 
 const refreshAccessToken = async () => {
     const refreshToken = getRefreshToken();
-
-    if (!refreshToken) {
-        throw new Error("No refresh token available");
-    }
-
-    const response = await refreshClient.post("/api/auth/refresh", { refreshToken });
+    const body = refreshToken ? { refreshToken } : {};
+    const response = await refreshClient.post("/api/auth/refresh", body);
     const data = response.data?.data || response.data;
 
     const tokens = {

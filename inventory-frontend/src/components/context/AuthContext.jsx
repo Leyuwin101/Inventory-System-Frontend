@@ -40,17 +40,6 @@ export function AuthProvider({ children }) {
         }
 
         const hydratePromise = (async () => {
-            const token = localStorage.getItem("accessToken");
-
-            if (!token) {
-                if (mountedRef.current) {
-                    commitUser(null);
-                    setAuthHydrated(true);
-                    setAuthLoading(false);
-                }
-                return null;
-            }
-
             if (force) {
                 clearAuthCache();
             }
@@ -60,6 +49,9 @@ export function AuthProvider({ children }) {
             }
 
             try {
+                // Always ask the API for /me during hydration. If the access token
+                // is missing or expired, the Axios interceptor gets one refresh
+                // chance using the HttpOnly refresh cookie before we log out.
                 const currentUser = await getCurrentUser();
 
                 if (mountedRef.current) {

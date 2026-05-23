@@ -37,7 +37,7 @@ const writeStoredCache = (key, entry) => {
     }
 };
 
-export const cachedRequest = (key, requestFn, { ttl = DEFAULT_TTL, force = false } = {}) => {
+export const cachedRequest = (key, requestFn, { ttl = DEFAULT_TTL, force = false, fallbackOnError = true } = {}) => {
     const cached = responseCache.get(key) || readStoredCache(key);
 
     if (!force && cached && cached.expiresAt > now()) {
@@ -61,7 +61,7 @@ export const cachedRequest = (key, requestFn, { ttl = DEFAULT_TTL, force = false
             return data;
         })
         .catch((error) => {
-            if (cached?.data) return cached.data;
+            if (fallbackOnError && cached?.data) return cached.data;
             throw error;
         })
         .finally(() => {

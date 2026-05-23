@@ -29,12 +29,14 @@ export default function AuthForm() {
             navigate("/main", { replace: true });
         } catch (err) {
             const status = err.response?.status;
-            const message = err.response?.data?.message || err.response?.data?.error;
+            const message = err.response?.data?.message || err.response?.data?.details || err.response?.data?.error;
 
             if (status >= 500) {
-                setError(message || "Login server error. Please check the backend logs.");
-            } else if (err.message === "Cannot store missing auth tokens") {
-                setError("Login response did not include valid tokens.");
+                setError("Login is temporarily unavailable. Please try again in a moment.");
+            } else if (err.message === "Cannot store missing access token") {
+                setError("Login response did not include a valid access token.");
+            } else if (status === 0 || err.code === "ERR_NETWORK") {
+                setError("Cannot reach the authentication server. Please check your connection.");
             } else {
                 setError(message || "Invalid email or password");
             }
