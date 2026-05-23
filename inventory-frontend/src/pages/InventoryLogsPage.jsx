@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { getInventoryLogs } from "../api/inventoryLogs";
+import { getAllProducts } from "../api/products";
 import {
     AlertCircle,
     ArrowDownLeft,
@@ -11,9 +12,14 @@ import {
     Filter,
     PackageSearch,
     RefreshCw,
+    Search,
     SlidersHorizontal,
+    X,
 } from "lucide-react";
 import { getPageCache, setPageCache } from "../store/pageCache";
+import useDebouncedValue from "../hooks/useDebouncedValue";
+import ExportButtons from "../components/ui/ExportButtons";
+import { exportToCsv, exportToPdf } from "../utils/exportUtils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -93,36 +99,41 @@ const typeConfig = {
 };
 
 export default function InventoryLogsPage() {
-    const initialCache = getPageCache("inventory-logs:1::::");
+    const savedState = getPageCache("inventory-logs:state") || {};
+    const initialCache = getPageCache("inventory-logs:1::::::createdAt:desc");
     const [logs, setLogs] = useState(initialCache?.logs || []);
+    const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(!initialCache);
     const [error, setError] = useState("");
     const [usingFallback, setUsingFallback] = useState(false);
-    const [page, setPage] = useState(1);
+    const [page, setPage] = useState(savedState.page || 1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
-    const [filters, setFilters] = useState({
+    const [search, setSearch] = useState(savedState.search || "");
+    const [filters, setFilters] = useState(savedState.filters || {
         startDate: "",
         endDate: "",
-        product: "",
+        productId: "",
         type: "",
+        sortBy: "createdAt",
+        sortDirection: "desc",
     });
+    const debouncedSearch = useDebouncedValue(search, 300);
     const activeFetchRef = useRef(0);
     const loadingRef = useRef(false);
     const mountedRef = useRef(false);
 
     const filteredFallbackLogs = useMemo(() => {
         return fallbackLogs.filter((log) => {
-            const matchesProduct = !filters.product || log.productName.toLowerCase().includes(filters.product.toLowerCase()) || log.sku.toLowerCase().includes(filters.product.toLowerCase());
             const matchesType = !filters.type || log.type === filters.type;
             const matchesStart = !filters.startDate || log.date >= filters.startDate;
             const matchesEnd = !filters.endDate || log.date <= filters.endDate;
-            return matchesProduct && matchesType && matchesStart && matchesEnd;
+            return matchesType && matchesStart && matchesEnd;
         });
     }, [filters]);
 
     const loadLogs = async () => {
-        const cacheKey = `inventory-logs:${page}:${filters.startDate}:${filters.endDate}:${filters.product}:${filters.type}`;
+        const cacheKey = `inventory-logs:${page}:${filters.startDate}:${filters.endDate}:${filters.productId}:${filters.type}:${filters.sortBy}:${filters.sortDirection}`;
         const cached = getPageCache(cacheKey);
         if (cached) {
             setLogs(cached.logs);
@@ -172,9 +183,6 @@ export default function InventoryLogsPage() {
                     usingFallback: true,
                 });
             } else {
-                setLogs([]);
-                setTotalItems(0);
-                setTotalPages(1);
                 setUsingFallback(false);
                 setError(err.response?.data?.message || "Failed to load inventory logs.");
             }
@@ -195,6 +203,31 @@ export default function InventoryLogsPage() {
         };
     }, [page, filters, filteredFallbackLogs]);
 
+    useEffect(() => {
+        getAllProducts()
+            .then(setProducts)
+            .catch(() => setProducts([]));
+    }, []);
+
+    useEffect(() => {
+        setPageCache("inventory-logs:state", { page, filters, search });
+    }, [filters, page, search]);
+
+    const visibleLogs = useMemo(() => {
+        const query = debouncedSearch.trim().toLowerCase();
+        if (!query) return logs;
+        return logs.filter((log) => [
+            log.productName,
+            log.product?.name,
+            log.sku,
+            log.product?.sku,
+            log.type,
+            log.reason,
+            log.notes,
+            log.userName,
+        ].some((value) => String(value || "").toLowerCase().includes(query)));
+    }, [debouncedSearch, logs]);
+
     const updateFilter = (key, value) => {
         setPage(1);
         setFilters((prev) => ({ ...prev, [key]: value }));
@@ -202,8 +235,25 @@ export default function InventoryLogsPage() {
 
     const clearFilters = () => {
         setPage(1);
-        setFilters({ startDate: "", endDate: "", product: "", type: "" });
+        setSearch("");
+        setFilters({
+            startDate: "",
+            endDate: "",
+            productId: "",
+            type: "",
+            sortBy: "createdAt",
+            sortDirection: "desc",
+        });
     };
+
+    const exportColumns = [
+        { header: "Date", accessor: (log) => formatDate(log.date || log.createdAt) },
+        { header: "Product", accessor: (log) => log.productName || log.product?.name || "Unknown product" },
+        { header: "SKU", accessor: (log) => log.sku || log.product?.sku || "" },
+        { header: "Type", accessor: (log) => typeConfig[log.type]?.label || String(log.type || "").replace("_", " ") },
+        { header: "Quantity", accessor: (log) => Math.abs(log.quantity || 0) },
+        { header: "Reason", accessor: (log) => log.reason || log.notes || "No reason provided" },
+    ];
 
     const formatDate = (date) => {
         if (!date) return "No date";
@@ -237,17 +287,37 @@ export default function InventoryLogsPage() {
             </div>
 
             <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 shadow-[var(--shadow)]">
-                <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-h)]">
                         <Filter size={16} className="text-[var(--accent)]" />
                         Filters
                     </div>
-                    <button onClick={clearFilters} className="text-xs font-semibold text-[var(--muted)] transition hover:text-[var(--text-h)]">
-                        Clear filters
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <ExportButtons
+                            disabled={visibleLogs.length === 0}
+                            onCsv={() => exportToCsv({ title: "Inventory Logs", columns: exportColumns, rows: visibleLogs })}
+                            onPdf={() => exportToPdf({ title: "Inventory Logs", subtitle: `${visibleLogs.length} rows matching current filters`, columns: exportColumns, rows: visibleLogs })}
+                        />
+                        <button onClick={clearFilters} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-h)] transition hover:bg-[var(--border)]">
+                            <X size={14} />
+                            Clear filters
+                        </button>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="mb-3">
+                    <div className="relative">
+                        <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+                        <input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search product, SKU, type, reason, or user..."
+                            className="w-full rounded-lg py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/30"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
                     <label className="space-y-1.5">
                         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Start date</span>
                         <input type="date" value={filters.startDate} onChange={(e) => updateFilter("startDate", e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" />
@@ -258,7 +328,12 @@ export default function InventoryLogsPage() {
                     </label>
                     <label className="space-y-1.5">
                         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Product</span>
-                        <input type="search" value={filters.product} onChange={(e) => updateFilter("product", e.target.value)} placeholder="Search product or SKU" className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" />
+                        <select value={filters.productId} onChange={(e) => updateFilter("productId", e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]">
+                            <option value="">All products</option>
+                            {products.map((product) => (
+                                <option key={product.id} value={product.id}>{product.name}</option>
+                            ))}
+                        </select>
                     </label>
                     <label className="space-y-1.5">
                         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Inventory type</span>
@@ -267,6 +342,22 @@ export default function InventoryLogsPage() {
                             <option value="STOCK_IN">Stock In</option>
                             <option value="STOCK_OUT">Stock Out</option>
                             <option value="ADJUSTMENT">Adjustment</option>
+                        </select>
+                    </label>
+                    <label className="space-y-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Sort by</span>
+                        <select value={filters.sortBy} onChange={(e) => updateFilter("sortBy", e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]">
+                            <option value="createdAt">Date</option>
+                            <option value="type">Type</option>
+                            <option value="quantity">Quantity</option>
+                            <option value="inventoryLogID">Log ID</option>
+                        </select>
+                    </label>
+                    <label className="space-y-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Direction</span>
+                        <select value={filters.sortDirection} onChange={(e) => updateFilter("sortDirection", e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]">
+                            <option value="desc">Newest first</option>
+                            <option value="asc">Oldest first</option>
                         </select>
                     </label>
                 </div>
@@ -293,22 +384,20 @@ export default function InventoryLogsPage() {
 
             <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-[var(--shadow)]">
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[900px] text-left text-sm">
+                    <table className="w-full min-w-[760px] text-left text-sm">
                         <thead className="border-b border-[var(--border)] bg-[var(--input-bg)] text-xs uppercase tracking-wide text-[var(--muted)]">
                             <tr>
                                 <th className="px-4 py-3 font-semibold">Date</th>
                                 <th className="px-4 py-3 font-semibold">Product</th>
                                 <th className="px-4 py-3 font-semibold">Type</th>
                                 <th className="px-4 py-3 font-semibold">Quantity</th>
-                                <th className="px-4 py-3 font-semibold">Stock Change</th>
                                 <th className="px-4 py-3 font-semibold">Reason</th>
-                                <th className="px-4 py-3 font-semibold">User</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]">
                             {loading && Array.from({ length: 6 }).map((_, index) => (
                                 <tr key={index} className="animate-pulse">
-                                    {Array.from({ length: 7 }).map((__, cellIndex) => (
+                                    {Array.from({ length: 5 }).map((__, cellIndex) => (
                                         <td key={cellIndex} className="px-4 py-4">
                                             <div className="h-4 rounded bg-[var(--input-bg)]" />
                                         </td>
@@ -316,7 +405,7 @@ export default function InventoryLogsPage() {
                                 </tr>
                             ))}
 
-                            {!loading && logs.map((log) => {
+                            {!loading && visibleLogs.map((log) => {
                                 const config = typeConfig[log.type] || typeConfig.ADJUSTMENT;
                                 const Icon = config.icon;
                                 return (
@@ -338,11 +427,7 @@ export default function InventoryLogsPage() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 font-mono font-semibold text-[var(--text-h)]">{Math.abs(log.quantity || 0)}</td>
-                                        <td className="px-4 py-3 font-mono text-xs text-[var(--muted)]">
-                                            {log.previousStock ?? "-"} to {log.newStock ?? "-"}
-                                        </td>
                                         <td className="px-4 py-3 text-[var(--text)]">{log.reason || log.notes || "No reason provided"}</td>
-                                        <td className="px-4 py-3 text-[var(--muted)]">{log.userName || log.user?.username || "System"}</td>
                                     </tr>
                                 );
                             })}
@@ -350,7 +435,7 @@ export default function InventoryLogsPage() {
                     </table>
                 </div>
 
-                {!loading && !error && logs.length === 0 && (
+                {!loading && !error && visibleLogs.length === 0 && (
                     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
                         <PackageSearch size={42} className="mb-3 text-[var(--muted)]" />
                         <h3 className="text-base font-semibold text-[var(--text-h)]">No inventory logs found</h3>

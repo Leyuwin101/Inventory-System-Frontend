@@ -9,6 +9,7 @@ import {
     Boxes,
     ShoppingCart,
     Truck,
+    Handshake,
     BarChart3,
     Settings,
     LogOut,
@@ -35,7 +36,8 @@ export default function Sidebar({ isOpen, onClose }) {
                 { label: "Products", icon: <Package size={18} />, path: "/products" },
                 { label: "Categories", icon: <Boxes size={18} />, path: "/inventory" },
                 { label: "Sales", icon: <ShoppingCart size={18} />, path: "/sales", roles: ["ADMIN", "MANAGER", "CASHIER"] },
-                { label: "Suppliers", icon: <Truck size={18} />, path: "/suppliers", roles: ["ADMIN", "MANAGER", "INVENTORY_CLERK"] }
+                { label: "Suppliers", icon: <Truck size={18} />, path: "/suppliers", roles: ["ADMIN", "MANAGER", "INVENTORY_CLERK"] },
+                { label: "Product Suppliers", icon: <Handshake size={18} />, path: "/product-suppliers", roles: ["ADMIN", "MANAGER"] }
             ]
         },
         {

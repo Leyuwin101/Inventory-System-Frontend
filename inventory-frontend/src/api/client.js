@@ -3,6 +3,7 @@ import { clearRequestCache } from "./requestCache";
 import { clearPageCache } from "../store/pageCache";
 
 const API_BASE_URL = "http://localhost:8080";
+const API_TIMEOUT_MS = 30000;
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const USER_KEY = "user";
@@ -12,7 +13,7 @@ export const api = axios.create({
     headers: {
         "Content-Type": "application/json",
     },
-    timeout: 10000,
+    timeout: API_TIMEOUT_MS,
 });
 
 const refreshClient = axios.create({
@@ -20,7 +21,7 @@ const refreshClient = axios.create({
     headers: {
         "Content-Type": "application/json",
     },
-    timeout: 10000,
+    timeout: API_TIMEOUT_MS,
 });
 
 let refreshPromise = null;

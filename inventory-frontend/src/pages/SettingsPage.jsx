@@ -2,6 +2,7 @@ import { useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useAuth } from "../components/context/AuthContext";
 import { useTheme } from "../components/context/ThemeContext";
+import { updateCurrentUser } from "../api/auth";
 import {
     CheckCircle2,
     Eye,
@@ -66,15 +67,24 @@ export default function SettingsPage() {
         }
 
         setSavingProfile(true);
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        updateUser({
-            ...user,
-            username: profileForm.username.trim(),
-            name: profileForm.username.trim(),
-            email: profileForm.email.trim(),
-        });
-        setSavingProfile(false);
-        showNotice("success", "Profile changes saved locally. Session preserved.");
+        try {
+            const updated = await updateCurrentUser({
+                username: profileForm.username.trim(),
+            });
+            updateUser({
+                ...user,
+                ...updated,
+                username: updated.username || profileForm.username.trim(),
+                name: updated.name || updated.username || profileForm.username.trim(),
+                email: updated.email || profileForm.email.trim(),
+            });
+            showNotice("success", "Profile changes saved to the database.");
+        } catch (err) {
+            console.error(err);
+            showNotice("error", err.response?.data?.message || "Failed to save profile changes.");
+        } finally {
+            setSavingProfile(false);
+        }
     };
 
     const handlePasswordSave = async (event) => {
@@ -159,7 +169,7 @@ export default function SettingsPage() {
                         <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-[var(--shadow)]">
                             <div className="mb-5">
                                 <h2 className="text-lg font-semibold text-[var(--text-h)]">Profile Information</h2>
-                                <p className="mt-1 text-xs text-[var(--muted)]">Frontend state is updated without clearing authentication tokens.</p>
+                                <p className="mt-1 text-xs text-[var(--muted)]">Username updates are saved to your account record.</p>
                             </div>
 
                             <form onSubmit={handleProfileSave} className="space-y-4">

@@ -2,12 +2,11 @@ export default function Card({ title, value, icon, children }) {
     return (
         <div
         className="
-            p-5 rounded-xl
+            p-4 sm:p-5 rounded-lg
             border border-[var(--border)]
             bg-[var(--card-bg)]
             shadow-[var(--shadow)]
             transition-all duration-200
-            hover:scale-[1.02]
         "
         >
         {/* HEADER */}

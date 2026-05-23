@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import Card from "../components/ui/Card";
 import { useAuth } from "../components/context/AuthContext";
 import { getAllProducts, getLowStockProducts } from "../api/products";
 import { getAllSales, getSalesByUser } from "../api/sales";
 import { getAllCategories } from "../api/categories";
-import { getAllSuppliers } from "../api/suppliers";
+import { getDashboardSummary } from "../api/dashboard";
 import { 
     Activity, 
     AlertTriangle, 
@@ -27,7 +27,7 @@ export default function MainPage() {
     const [lowStock, setLowStock] = useState(cachedDashboard?.lowStock || []);
     const [categories, setCategories] = useState(cachedDashboard?.categories || []);
     const [sales, setSales] = useState(cachedDashboard?.sales || []);
-    const [suppliersCount, setSuppliersCount] = useState(cachedDashboard?.suppliersCount || 0);
+    const [summary, setSummary] = useState(cachedDashboard?.summary || null);
     const [loading, setLoading] = useState(!cachedDashboard);
     const [error, setError] = useState(null);
     const loadingRef = useRef(false);
@@ -36,7 +36,6 @@ export default function MainPage() {
     // Authority Checks
     const role = user?.role?.replace("ROLE_", "").toUpperCase() || "";
     const isAdminOrManager = ["ADMIN", "MANAGER"].includes(role);
-    const isClerk = role === "INVENTORY_CLERK";
     const isCashier = role === "CASHIER";
 
     const loadDashboardData = useCallback(async () => {
@@ -49,6 +48,10 @@ export default function MainPage() {
             // Build parallel promises list with safe fallback catches 
             // so individual API failures do not brick the entire dashboard.
             const promises = [
+                getDashboardSummary().catch(err => {
+                    console.error("Failed to load dashboard summary", err);
+                    return null;
+                }),
                 getAllProducts().catch(err => {
                     console.error("Failed to load products for dashboard", err);
                     return [];
@@ -83,33 +86,21 @@ export default function MainPage() {
                 promises.push(Promise.resolve([]));
             }
 
-            // Suppliers count (accessible to Admin, Manager, and Inventory Clerk)
-            if (isAdminOrManager || isClerk) {
-                promises.push(
-                    getAllSuppliers().catch(err => {
-                        console.error("Failed to load suppliers for dashboard", err);
-                        return [];
-                    })
-                );
-            } else {
-                promises.push(Promise.resolve([]));
-            }
-
-            const [productsData, lowStockData, categoriesData, salesData, suppliersData] = await Promise.all(promises);
+            const [summaryData, productsData, lowStockData, categoriesData, salesData] = await Promise.all(promises);
 
             if (!mountedRef.current) return;
 
+            setSummary(summaryData);
             setProducts(Array.isArray(productsData) ? productsData : productsData.data || []);
             setLowStock(Array.isArray(lowStockData) ? lowStockData : lowStockData.data || []);
             setCategories(Array.isArray(categoriesData) ? categoriesData : categoriesData.data || []);
             setSales(Array.isArray(salesData) ? salesData : salesData.data || []);
-            setSuppliersCount(Array.isArray(suppliersData) ? suppliersData.length : 0);
             setPageCache("dashboard", {
+                summary: summaryData,
                 products: Array.isArray(productsData) ? productsData : productsData.data || [],
                 lowStock: Array.isArray(lowStockData) ? lowStockData : lowStockData.data || [],
                 categories: Array.isArray(categoriesData) ? categoriesData : categoriesData.data || [],
                 sales: Array.isArray(salesData) ? salesData : salesData.data || [],
-                suppliersCount: Array.isArray(suppliersData) ? suppliersData.length : 0,
             });
 
         } catch (err) {
@@ -123,15 +114,20 @@ export default function MainPage() {
                 setLoading(false);
             }
         }
-    }, [isAdminOrManager, isCashier, isClerk, user]);
+    }, [isAdminOrManager, isCashier, user]);
 
     useEffect(() => {
         mountedRef.current = true;
+        let timeoutId;
+
         if (!cachedDashboard) {
-            loadDashboardData();
+            timeoutId = window.setTimeout(() => {
+                loadDashboardData();
+            }, 0);
         }
 
         return () => {
+            if (timeoutId) window.clearTimeout(timeoutId);
             mountedRef.current = false;
         };
     }, [cachedDashboard, loadDashboardData]);
@@ -183,6 +179,7 @@ export default function MainPage() {
                         products={products} 
                         sales={sales} 
                         lowStockCount={lowStock.length} 
+                        summary={summary}
                     />
 
                     {/* DETAILED MONITOR PANELS */}

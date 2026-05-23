@@ -50,7 +50,7 @@ export default function AuthForm() {
             transition={{ duration: 0.5 }}
             className="
                 w-full max-w-md sm:max-w-lg
-                min-h-auto sm:min-h-[70vh]
+                min-h-auto sm:min-h-[68vh]
 
                 bg-[var(--card-bg)]
                 border border-[var(--border)]
@@ -58,18 +58,24 @@ export default function AuthForm() {
 
                 p-6 sm:p-8 lg:p-10
 
-                shadow-[var(--shadow)]
+                shadow-[0_24px_70px_-28px_rgba(16,185,129,0.45),var(--shadow)]
 
                 flex flex-col justify-center
             "
         >
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                <h2 className="
-                    text-xl sm:text-2xl lg:text-3xl
-                    font-bold text-[var(--text-h)]
-                ">
-                    Welcome To SariStore IMS
-                </h2>
+                <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Inventory Management</p>
+                    <h2 className="
+                        text-2xl sm:text-3xl
+                        font-bold text-[var(--text-h)]
+                    ">
+                        Welcome to SariStore IMS
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                        Use the account created by your administrator to access inventory, sales, reports, and stock movement.
+                    </p>
+                </div>
 
                 <AuthInput
                     label="Username or Email"

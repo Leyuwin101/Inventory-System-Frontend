@@ -5,6 +5,7 @@ import MainPage from "./pages/MainPage";
 import ProductPage from "./pages/ProductPage";
 import CategoryPage from "./pages/CategoryPage";
 import SuppliersPage from "./pages/SuppliersPage";
+import ProductSuppliersPage from "./pages/ProductSuppliersPage";
 import SalesPage from "./pages/SalesPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -52,6 +53,15 @@ export default function App() {
                     element={
                         <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "INVENTORY_CLERK"]}>
                             <SuppliersPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/product-suppliers"
+                    element={
+                        <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+                            <ProductSuppliersPage />
                         </ProtectedRoute>
                     }
                 />

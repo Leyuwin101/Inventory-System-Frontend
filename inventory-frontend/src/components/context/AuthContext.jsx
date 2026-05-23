@@ -71,9 +71,21 @@ export function AuthProvider({ children }) {
                 return currentUser;
             } catch (err) {
                 console.error("Auth hydration failed:", err);
+                const status = err.response?.status;
+                const storedUser = localStorage.getItem("user");
+                let fallbackUser;
+                try {
+                    fallbackUser = storedUser ? JSON.parse(storedUser) : null;
+                } catch {
+                    fallbackUser = null;
+                }
 
                 if (mountedRef.current) {
-                    commitUser(null);
+                    if (status === 401 || status === 403 || !fallbackUser) {
+                        commitUser(null);
+                    } else {
+                        setUser(fallbackUser);
+                    }
                     setAuthHydrated(true);
                     setAuthLoading(false);
                 }
@@ -110,6 +122,7 @@ export function AuthProvider({ children }) {
         setTokens(accessToken, refreshToken);
         clearAuthCache();
         clearRequestCache();
+        clearPageCache();
 
         if (loginUser) {
             commitUser(loginUser);
@@ -144,4 +157,5 @@ export function AuthProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

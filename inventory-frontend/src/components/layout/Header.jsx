@@ -26,13 +26,13 @@ export default function Header({ onMenuClick }) {
         <div
             className="
                 w-full mb-4 sm:mb-6
-                p-4 sm:p-5
-                rounded-xl
+                p-3 sm:p-5
+                rounded-lg
                 bg-[var(--card-bg)]
                 border border-[var(--border)]
                 shadow-[var(--shadow)]
                 flex items-center justify-between
-                flex-wrap gap-4
+                gap-3 sm:gap-4
             "
         >
             {/* LEFT SIDE - USER INFO */}
@@ -40,7 +40,7 @@ export default function Header({ onMenuClick }) {
                 {/* HAMBURGER TRIGGER FOR MOBILE */}
                 <button
                     onClick={onMenuClick}
-                    className="lg:hidden p-2 rounded-lg hover:bg-[var(--input-bg)] text-[var(--muted)] hover:text-[var(--text-h)] border border-[var(--border)] transition flex-shrink-0"
+                    className="lg:hidden p-2 rounded-md hover:bg-[var(--input-bg)] text-[var(--muted)] hover:text-[var(--text-h)] border border-[var(--border)] transition flex-shrink-0"
                     aria-label="Open Sidebar"
                 >
                     <Menu size={20} />
@@ -49,12 +49,12 @@ export default function Header({ onMenuClick }) {
                 {/* AVATAR */}
                 <div
                     className="
-                        w-12 h-12 sm:w-14 sm:h-14
-                        rounded-xl
+                        w-10 h-10 sm:w-12 sm:h-12
+                        rounded-lg
                         bg-[var(--accent)]
                         flex items-center justify-center
                         text-[var(--accent-text)]
-                        font-bold text-lg sm:text-xl
+                        font-bold text-base sm:text-lg
                         uppercase
                         flex-shrink-0
                     "
@@ -82,7 +82,7 @@ export default function Header({ onMenuClick }) {
 
             {/* RIGHT SIDE - ROLE BADGE */}
             <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-xl bg-[var(--input-bg)] border border-[var(--border)]">
+                <div className="flex items-center gap-2 px-2.5 py-2 sm:px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)]">
                     <Shield size={14} className="text-[var(--accent)]" />
                     <span
                         className="

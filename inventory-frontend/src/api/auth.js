@@ -14,6 +14,17 @@ const getUserPayload = (data = {}) => (
     null
 );
 
+const normalizeAuthUser = (user = {}) => ({
+    ...user,
+    id: user.id ?? user.userId ?? user.userID,
+    userId: user.userId ?? user.id ?? user.userID,
+    userID: user.userID ?? user.userId ?? user.id,
+    username: user.username ?? user.name ?? "",
+    name: user.name ?? user.username ?? "",
+    email: user.email ?? "",
+    role: user.role,
+});
+
 const decodeJwtPayload = (token) => {
     try {
         const [, payload] = token.split(".");
@@ -106,8 +117,14 @@ export const refreshToken = (refreshToken) => {
 export const getCurrentUser = async () => {
     return cachedRequest("auth:me", async () => {
         const res = await api.get("/api/auth/me");
-        return res.data?.data || res.data;
+        return normalizeAuthUser(res.data?.data || res.data);
     }, { ttl: 120_000 });
+};
+
+export const updateCurrentUser = async (payload) => {
+    const res = await api.put("/api/auth/me", payload);
+    invalidateCache("auth:");
+    return normalizeAuthUser(res.data?.data || res.data);
 };
 
 export const clearAuthCache = () => {

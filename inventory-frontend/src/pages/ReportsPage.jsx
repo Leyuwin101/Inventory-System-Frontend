@@ -1,18 +1,26 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
+import { getAllCategories } from "../api/categories";
+import { getAllProducts } from "../api/products";
+import { getReport } from "../api/reports";
+import { getAllSuppliers } from "../api/suppliers";
 import {
+    AlertCircle,
     BarChart3,
     CalendarDays,
-    Download,
-    FileText,
     Layers,
-    Package,
+    Loader2,
     PackageMinus,
     RefreshCw,
     ShoppingCart,
     Truck,
     Wallet,
+    Search,
 } from "lucide-react";
+import ExportButtons from "../components/ui/ExportButtons";
+import useDebouncedValue from "../hooks/useDebouncedValue";
+import { exportToCsv, exportToPdf } from "../utils/exportUtils";
+import { getPageCache, setPageCache } from "../store/pageCache";
 
 const reports = [
     { id: "sales-summary", label: "Sales Summary", icon: ShoppingCart },
@@ -22,67 +30,187 @@ const reports = [
     { id: "supplier-performance", label: "Supplier Performance", icon: Truck },
 ];
 
-const kpis = [
-    { label: "Gross Sales", value: "PHP 342,980.50", detail: "+12.4% vs previous period", icon: Wallet, tone: "text-emerald-500" },
-    { label: "Transactions", value: "1,420", detail: "Average basket PHP 241.54", icon: ShoppingCart, tone: "text-sky-500" },
-    { label: "Stock Movement", value: "3,846 units", detail: "Stock in and stock out volume", icon: Package, tone: "text-amber-500" },
-    { label: "Low Stock SKUs", value: "18", detail: "Below reorder threshold", icon: PackageMinus, tone: "text-rose-500" },
-];
+const money = (value) => `PHP ${Number(value || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const number = (value) => Number(value || 0).toLocaleString("en-PH");
 
-const reportRows = {
-    "sales-summary": [
-        ["Cash sales", "842 orders", "PHP 188,420.00", "55% share"],
-        ["GCash sales", "421 orders", "PHP 96,800.50", "28% share"],
-        ["Credit sales", "157 orders", "PHP 57,760.00", "17% share"],
-    ],
-    "inventory-movement": [
-        ["Stock In", "1,920 units", "24 receiving logs", "Supplier delivery"],
-        ["Stock Out", "1,706 units", "1,420 sales logs", "POS movement"],
-        ["Adjustments", "220 units", "18 audit logs", "Damage and recount"],
-    ],
-    "low-stock": [
-        ["Nescafe 3-in-1 Original", "13 units", "30 unit threshold", "Reorder needed"],
-        ["Century Tuna Flakes", "9 units", "24 unit threshold", "Critical"],
-        ["Silver Swan Soy Sauce", "18 units", "36 unit threshold", "Monitor"],
-    ],
-    "category-performance": [
-        ["Beverages", "PHP 130,332.59", "38% revenue share", "+8.1% growth"],
-        ["Coffee & Tea", "PHP 82,315.32", "24% revenue share", "+11.6% growth"],
-        ["Snacks", "PHP 61,736.49", "18% revenue share", "+4.9% growth"],
-    ],
-    "supplier-performance": [
-        ["ABC Distribution", "96% fill rate", "PHP 82,400.00 supplied", "2.1 days avg lead"],
-        ["Metro Goods Trading", "91% fill rate", "PHP 58,200.00 supplied", "3.4 days avg lead"],
-        ["NorthStar Wholesale", "88% fill rate", "PHP 41,870.00 supplied", "4.0 days avg lead"],
-    ],
+const getKpis = (reportId, data = {}) => {
+    if (reportId === "sales-summary") {
+        return [
+            { label: "Gross Sales", value: money(data.totalSales), detail: "Total recorded revenue", icon: Wallet, tone: "text-emerald-500" },
+            { label: "Transactions", value: number(data.totalTransactions), detail: "Completed sales in scope", icon: ShoppingCart, tone: "text-sky-500" },
+            { label: "Average Order", value: money(data.averagedOrderValue), detail: "Average basket value", icon: BarChart3, tone: "text-amber-500" },
+        ];
+    }
+
+    if (reportId === "inventory-movement") {
+        return [
+            { label: "Stock In", value: number(data.totalStockIn), detail: "Received inventory logs", icon: RefreshCw, tone: "text-emerald-500" },
+            { label: "Stock Out", value: number(data.totalStockOut), detail: "Issued inventory logs", icon: PackageMinus, tone: "text-rose-500" },
+            { label: "Adjustments", value: number(data.totalAdjustments), detail: "Manual stock corrections", icon: Layers, tone: "text-amber-500" },
+        ];
+    }
+
+    if (reportId === "low-stock") {
+        return [
+            { label: "Low Stock SKUs", value: number(data.lowStockCount), detail: "Below minimum stock", icon: PackageMinus, tone: "text-rose-500" },
+        ];
+    }
+
+    if (reportId === "category-performance") {
+        return [
+            { label: "Category Revenue", value: money(data.totalRevenue), detail: "Revenue grouped by category", icon: Wallet, tone: "text-emerald-500" },
+            { label: "Products Sold", value: number(data.totalProductSold), detail: "Units sold across categories", icon: ShoppingCart, tone: "text-sky-500" },
+            { label: "Top Category", value: data.topCategory || "N/A", detail: "Highest revenue category", icon: Layers, tone: "text-amber-500" },
+        ];
+    }
+
+    return [
+        { label: "Supplier Revenue", value: money(data.totalSupplierRevenue), detail: "Supplier contribution total", icon: Wallet, tone: "text-emerald-500" },
+        { label: "Top Supplier", value: data.topSupplier || "N/A", detail: "Highest contribution supplier", icon: Truck, tone: "text-sky-500" },
+    ];
 };
 
-const chartBars = [44, 62, 58, 76, 69, 84, 72, 91];
+const getTable = (reportId, data = {}) => {
+    if (reportId === "sales-summary") {
+        return {
+            columns: ["Sale", "Cashier", "Payment", "Total"],
+            rows: (data.tableRows || []).map((sale) => [
+                sale.saleId || sale.id || "Sale",
+                sale.cashierName || sale.username || "System",
+                sale.paymentMethod || "N/A",
+                money(sale.totalPrice || sale.totalAmount || sale.total),
+            ]),
+        };
+    }
+
+    if (reportId === "inventory-movement") {
+        return {
+            columns: ["Product", "Type", "Quantity", "Reason"],
+            rows: (data.tableRows || []).map((log) => [
+                log.productName || "Unknown product",
+                String(log.type || "").replace("_", " "),
+                number(log.quantity),
+                log.reason || "No reason",
+            ]),
+        };
+    }
+
+    if (reportId === "low-stock") {
+        return {
+            columns: ["Product", "SKU", "Stock", "Minimum"],
+            rows: (data.tableRows || []).map((product) => [
+                product.name || "Unnamed product",
+                product.sku || "No SKU",
+                number(product.stockQuantity ?? product.stock_quantity),
+                number(product.minimumStock ?? product.minimum_stock),
+            ]),
+        };
+    }
+
+    if (reportId === "category-performance") {
+        return {
+            columns: ["Category", "Revenue", "Products Sold", "Share"],
+            rows: (data.tableRows || []).map((row) => [
+                row.categoryName || "Uncategorized",
+                money(row.revenue),
+                number(row.productsSold),
+                `${Number(row.revenuePercentage || 0).toFixed(1)}%`,
+            ]),
+        };
+    }
+
+    return {
+        columns: ["Supplier", "Contribution", "Products", "Share"],
+        rows: (data.tableRows || []).map((row) => [
+            row.supplierName || "Unnamed supplier",
+            money(row.contributionAmount),
+            number(row.supplierProducts),
+            `${Number(row.contributionPercentage || 0).toFixed(1)}%`,
+        ]),
+    };
+};
+
+const getChartValues = (reportId, data = {}) => {
+    if (reportId === "sales-summary") return (data.chartRows || []).map((row) => Number(row.sales || 0));
+    if (reportId === "inventory-movement") return (data.chartRows || []).map((row) => Number(row.stockIn || row.quantity || 0) + Number(row.stockOut || 0));
+    if (reportId === "low-stock") return (data.chartRows || []).map((row) => Number(row.stockQuantity ?? row.stock_quantity ?? 0));
+    if (reportId === "category-performance") return (data.chartRows || []).map((row) => Number(row.revenue || 0));
+    return (data.chartRows || []).map((row) => Number(row.contributionAmount || 0));
+};
 
 export default function ReportsPage() {
-    const [activeReport, setActiveReport] = useState("sales-summary");
-    const [filters, setFilters] = useState({
-        startDate: "2026-05-01",
-        endDate: "2026-05-22",
-        category: "",
-        product: "",
-        supplier: "",
+    const cachedReportState = getPageCache("reports:state") || {};
+    const [activeReport, setActiveReport] = useState(cachedReportState.activeReport || "sales-summary");
+    const [filters, setFilters] = useState(cachedReportState.filters || {
+        startDate: "",
+        endDate: "",
+        categoryId: "",
+        productId: "",
+        supplierId: "",
     });
-    const [exportMessage, setExportMessage] = useState("");
+    const [tableQuery, setTableQuery] = useState(cachedReportState.tableQuery || "");
+    const [reportData, setReportData] = useState({});
+    const [categories, setCategories] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [suppliers, setSuppliers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
     const activeReportMeta = useMemo(
         () => reports.find((report) => report.id === activeReport) || reports[0],
         [activeReport]
     );
     const ActiveReportIcon = activeReportMeta.icon;
+    const kpis = useMemo(() => getKpis(activeReport, reportData), [activeReport, reportData]);
+    const table = useMemo(() => getTable(activeReport, reportData), [activeReport, reportData]);
+    const debouncedTableQuery = useDebouncedValue(tableQuery, 300);
+    const filteredTableRows = useMemo(() => {
+        const query = debouncedTableQuery.trim().toLowerCase();
+        if (!query) return table.rows;
+        return table.rows.filter((row) => row.some((cell) => String(cell || "").toLowerCase().includes(query)));
+    }, [debouncedTableQuery, table.rows]);
+    const chartValues = useMemo(() => getChartValues(activeReport, reportData), [activeReport, reportData]);
+    const maxChartValue = Math.max(...chartValues, 1);
+
+    const loadReport = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError("");
+            const data = await getReport(activeReport, filters);
+            setReportData(data);
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to load report.");
+        } finally {
+            setLoading(false);
+        }
+    }, [activeReport, filters]);
+
+    useEffect(() => {
+        setPageCache("reports:state", { activeReport, filters, tableQuery });
+    }, [activeReport, filters, tableQuery]);
+
+    useEffect(() => {
+        Promise.all([
+            getAllCategories().catch(() => []),
+            getAllProducts().catch(() => []),
+            getAllSuppliers().catch(() => []),
+        ]).then(([categoryRows, productRows, supplierRows]) => {
+            setCategories(categoryRows);
+            setProducts(productRows);
+            setSuppliers(supplierRows);
+        });
+    }, []);
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            loadReport();
+        }, 0);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [loadReport]);
 
     const updateFilter = (key, value) => {
         setFilters((prev) => ({ ...prev, [key]: value }));
-    };
-
-    const handleExport = (format) => {
-        setExportMessage(`${format.toUpperCase()} export is ready to connect when backend export endpoints are available.`);
-        window.setTimeout(() => setExportMessage(""), 3500);
     };
 
     return (
@@ -92,27 +220,23 @@ export default function ReportsPage() {
                     <h1 className="flex items-center gap-2 text-xl font-semibold text-[var(--text-h)] sm:text-2xl">
                         <BarChart3 className="text-[var(--accent)]" size={24} />
                         Reports
+                        {loading && <Loader2 size={18} className="animate-spin text-[var(--accent)]" />}
                     </h1>
                     <p className="mt-1 text-sm text-[var(--muted)]">
                         Sales, inventory, category, supplier, and low stock reporting workspace.
                     </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                    <button onClick={() => handleExport("csv")} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-h)] transition hover:bg-[var(--input-bg)]">
-                        <Download size={16} />
-                        CSV
-                    </button>
-                    <button onClick={() => handleExport("pdf")} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-h)] transition hover:bg-[var(--input-bg)]">
-                        <FileText size={16} />
-                        PDF
-                    </button>
-                </div>
+                <button onClick={loadReport} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-h)] transition hover:bg-[var(--input-bg)]">
+                    <RefreshCw size={16} />
+                    Refresh
+                </button>
             </div>
 
-            {exportMessage && (
-                <div className="mb-5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-500">
-                    {exportMessage}
+            {error && (
+                <div className="mb-5 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400">
+                    <AlertCircle size={16} />
+                    {error}
                 </div>
             )}
 
@@ -151,24 +275,23 @@ export default function ReportsPage() {
                     </label>
                     <label className="space-y-1.5">
                         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Category</span>
-                        <select value={filters.category} onChange={(e) => updateFilter("category", e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]">
+                        <select value={filters.categoryId} onChange={(e) => updateFilter("categoryId", e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]">
                             <option value="">All categories</option>
-                            <option value="beverages">Beverages</option>
-                            <option value="coffee">Coffee & Tea</option>
-                            <option value="snacks">Snacks</option>
+                            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                         </select>
                     </label>
                     <label className="space-y-1.5">
                         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Product</span>
-                        <input value={filters.product} onChange={(e) => updateFilter("product", e.target.value)} placeholder="Product name or SKU" className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" />
+                        <select value={filters.productId} onChange={(e) => updateFilter("productId", e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]">
+                            <option value="">All products</option>
+                            {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+                        </select>
                     </label>
                     <label className="space-y-1.5">
                         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Supplier</span>
-                        <select value={filters.supplier} onChange={(e) => updateFilter("supplier", e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]">
+                        <select value={filters.supplierId} onChange={(e) => updateFilter("supplierId", e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]">
                             <option value="">All suppliers</option>
-                            <option value="abc">ABC Distribution</option>
-                            <option value="metro">Metro Goods Trading</option>
-                            <option value="northstar">NorthStar Wholesale</option>
+                            {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
                         </select>
                     </label>
                 </div>
@@ -183,11 +306,7 @@ export default function ReportsPage() {
                             <button
                                 key={report.id}
                                 onClick={() => setActiveReport(report.id)}
-                                className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                                    active
-                                        ? "bg-[var(--accent)] text-[var(--accent-text)]"
-                                        : "text-[var(--muted)] hover:bg-[var(--input-bg)] hover:text-[var(--text-h)]"
-                                }`}
+                                className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${active ? "bg-[var(--accent)] text-[var(--accent-text)]" : "text-[var(--muted)] hover:bg-[var(--input-bg)] hover:text-[var(--text-h)]"}`}
                             >
                                 <Icon size={16} />
                                 {report.label}
@@ -197,75 +316,70 @@ export default function ReportsPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-[var(--shadow)] xl:col-span-2">
-                    <div className="mb-5 flex items-start justify-between gap-4">
-                        <div>
-                            <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--text-h)]">
-                                <ActiveReportIcon size={18} className="text-[var(--accent)]" />
-                                {activeReportMeta.label}
-                            </h2>
-                            <p className="mt-1 text-xs text-[var(--muted)]">
-                                Placeholder analytics visualization ready for backend aggregate data.
-                            </p>
-                        </div>
-                        <span className="rounded-full border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1 text-xs font-semibold text-[var(--muted)]">
-                            Frontend preview
-                        </span>
-                    </div>
-
-                    <div className="flex h-72 items-end gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
-                        {chartBars.map((height, index) => (
-                            <div key={index} className="flex h-full flex-1 flex-col justify-end gap-2">
-                                <div className="rounded-t-md border border-[var(--border)] bg-gradient-to-t from-[var(--accent)]/10 to-[var(--accent)]" style={{ height: `${height}%` }} />
-                                <span className="text-center text-[10px] font-semibold text-[var(--muted)]">W{index + 1}</span>
-                            </div>
-                        ))}
-                    </div>
+            <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-[var(--shadow)]">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                    <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--text-h)]">
+                        <ActiveReportIcon size={18} className="text-[var(--accent)]" />
+                        {activeReportMeta.label}
+                    </h2>
                 </div>
 
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-[var(--shadow)]">
-                    <h2 className="text-base font-semibold text-[var(--text-h)]">Report Coverage</h2>
-                    <p className="mt-1 text-xs text-[var(--muted)]">
-                        Required backend reports represented in this UI.
-                    </p>
-                    <div className="mt-5 space-y-3">
-                        {reports.map((report) => {
-                            const Icon = report.icon;
-                            return (
-                                <div key={report.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-3">
-                                    <span className="flex items-center gap-2 text-sm font-semibold text-[var(--text-h)]">
-                                        <Icon size={15} className="text-[var(--accent)]" />
-                                        {report.label}
-                                    </span>
-                                    <span className="text-xs text-[var(--muted)]">Planned API</span>
-                                </div>
-                            );
-                        })}
-                    </div>
+                <div className="flex h-72 items-end gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
+                    {(chartValues.length ? chartValues : [0]).map((value, index) => (
+                        <div key={`${value}-${index}`} className="flex h-full flex-1 flex-col justify-end gap-2">
+                            <div className="rounded-t-md border border-[var(--border)] bg-[var(--accent)]/80" style={{ height: `${Math.max(4, (value / maxChartValue) * 100)}%` }} />
+                            <span className="text-center text-[10px] font-semibold text-[var(--muted)]">{index + 1}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            <div className="mt-5 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-[var(--shadow)]">
-                <div className="border-b border-[var(--border)] px-5 py-4">
+            <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-[var(--shadow)]">
+                <div className="flex flex-col gap-3 border-b border-[var(--border)] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                     <h2 className="text-base font-semibold text-[var(--text-h)]">{activeReportMeta.label} Details</h2>
-                    <p className="mt-1 text-xs text-[var(--muted)]">Representative rows until backend report endpoints are connected.</p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div className="relative">
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+                            <input
+                                value={tableQuery}
+                                onChange={(e) => setTableQuery(e.target.value)}
+                                placeholder="Search table..."
+                                className="w-full rounded-lg py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/30 sm:w-64"
+                            />
+                        </div>
+                        <ExportButtons
+                            disabled={filteredTableRows.length === 0}
+                            onCsv={() => exportToCsv({
+                                title: `${activeReportMeta.label} Report`,
+                                columns: table.columns.map((column, index) => ({ header: column, accessor: (row) => row[index] })),
+                                rows: filteredTableRows,
+                            })}
+                            onPdf={() => exportToPdf({
+                                title: `${activeReportMeta.label} Report`,
+                                subtitle: `${filteredTableRows.length} rows matching current report filters`,
+                                columns: table.columns.map((column, index) => ({ header: column, accessor: (row) => row[index] })),
+                                rows: filteredTableRows,
+                            })}
+                        />
+                    </div>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[720px] text-left text-sm">
-                        <thead className="bg-[var(--input-bg)] text-xs uppercase tracking-wide text-[var(--muted)]">
+                        <thead className="sticky top-0 z-10 bg-[var(--input-bg)] text-xs uppercase tracking-wide text-[var(--muted)]">
                             <tr>
-                                <th className="px-4 py-3 font-semibold">Name</th>
-                                <th className="px-4 py-3 font-semibold">Metric</th>
-                                <th className="px-4 py-3 font-semibold">Value</th>
-                                <th className="px-4 py-3 font-semibold">Status</th>
+                                {table.columns.map((column) => <th key={column} className="px-4 py-3 font-semibold">{column}</th>)}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]">
-                            {reportRows[activeReport].map((row) => (
+                            {loading && Array.from({ length: 4 }).map((_, rowIndex) => (
+                                <tr key={rowIndex} className="animate-pulse">
+                                    {table.columns.map((column) => <td key={column} className="px-4 py-4"><div className="h-4 rounded bg-[var(--input-bg)]" /></td>)}
+                                </tr>
+                            ))}
+                            {!loading && filteredTableRows.map((row) => (
                                 <tr key={row.join("-")} className="transition hover:bg-[var(--input-bg)]/55">
-                                    {row.map((cell) => (
-                                        <td key={cell} className="px-4 py-3 text-[var(--text)] first:font-semibold first:text-[var(--text-h)]">
+                                    {row.map((cell, index) => (
+                                        <td key={`${cell}-${index}`} className="px-4 py-3 text-[var(--text)] first:font-semibold first:text-[var(--text-h)]">
                                             {cell}
                                         </td>
                                     ))}
@@ -274,6 +388,9 @@ export default function ReportsPage() {
                         </tbody>
                     </table>
                 </div>
+                {!loading && filteredTableRows.length === 0 && (
+                    <div className="px-6 py-12 text-center text-sm text-[var(--muted)]">No report rows found for the selected filters.</div>
+                )}
             </div>
         </DashboardLayout>
     );

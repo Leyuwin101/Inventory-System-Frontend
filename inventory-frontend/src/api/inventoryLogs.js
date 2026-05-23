@@ -1,6 +1,6 @@
 import { api } from "./client";
 import { asArray, normalizeInventoryLog, unwrapApiData } from "./normalizers";
-import { cachedRequest } from "./requestCache";
+import { cachedRequest, invalidateCache } from "./requestCache";
 
 export const getInventoryLogs = async ({
     page = 1,
@@ -8,16 +8,22 @@ export const getInventoryLogs = async ({
     startDate = "",
     endDate = "",
     product = "",
+    productId = "",
     type = "",
+    sortBy = "createdAt",
+    sortDirection = "desc",
 } = {}) => {
     const params = new URLSearchParams({
-        page: page.toString(),
+        page: Math.max(0, page - 1).toString(),
         limit: limit.toString(),
+        sortBy,
+        sortDirection,
     });
 
     if (startDate) params.append("startDate", startDate);
     if (endDate) params.append("endDate", endDate);
     if (product) params.append("product", product);
+    if (productId) params.append("productID", productId);
     if (type) params.append("type", type);
 
     return cachedRequest(`inventory-logs:list:${params.toString()}`, async () => {
@@ -32,6 +38,28 @@ export const getInventoryLogs = async ({
             logs,
             totalItems: data?.totalItems ?? data?.totalElements ?? logs.length,
             totalPages: data?.totalPages ?? 1,
+            page: (data?.page ?? 0) + 1,
+            limit: data?.limit ?? limit,
         };
     });
 };
+
+const createInventoryLog = async (path, payload) => {
+    const res = await api.post(path, {
+        productId: payload.productId,
+        quantity: payload.quantity,
+        reason: payload.reason,
+    });
+
+    invalidateCache("inventory-logs:");
+    invalidateCache("products:");
+    invalidateCache("dashboard:");
+
+    return normalizeInventoryLog(unwrapApiData(res.data));
+};
+
+export const createStockInLog = (payload) => createInventoryLog("/api/inventory-logs/stock-in", payload);
+
+export const createStockOutLog = (payload) => createInventoryLog("/api/inventory-logs/stock-out", payload);
+
+export const createStockAdjustmentLog = (payload) => createInventoryLog("/api/inventory-logs/adjust", payload);

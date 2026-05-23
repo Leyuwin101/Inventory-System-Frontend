@@ -1,17 +1,12 @@
-import React from "react";
 import { Package, Layers, Wallet, TrendingUp, AlertTriangle } from "lucide-react";
 
-export default function StatsGrid({ products = [], sales = [], lowStockCount = 0 }) {
-    // 1. Total Products (Unique catalog items)
+const formatMoney = (value) => `PHP ${Number(value || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+export default function StatsGrid({ products = [], sales = [], lowStockCount = 0, summary = null }) {
     const totalProducts = products.length;
-
-    // 2. Total Stock Count (Sum of all item quantities)
     const totalStock = products.reduce((sum, p) => sum + (Number(p.stock_quantity ?? p.stock) || 0), 0);
-
-    // 3. Inventory Value (Sum of price * stock)
     const totalValue = products.reduce((sum, p) => sum + ((Number(p.price) || 0) * (Number(p.stock_quantity ?? p.stock) || 0)), 0);
 
-    // 4. Sales Today Revenue
     const todayStr = new Date().toDateString();
     const salesToday = sales.filter((s) => {
         const dateStr = s.saleDate || s.createdDate || s.timestamp || s.sale_date;
@@ -19,46 +14,46 @@ export default function StatsGrid({ products = [], sales = [], lowStockCount = 0
         return dateStr && new Date(dateStr).toDateString() === todayStr && !isCancelled;
     });
     const revenueToday = salesToday.reduce((sum, s) => sum + (Number(s.totalPrice || s.total_price || s.total || 0)), 0);
+    const effectiveLowStock = Number(summary?.lowStockCount ?? lowStockCount ?? 0);
 
-    // Cards configuration
     const statCards = [
         {
-            title: "Unique Products",
-            value: totalProducts.toLocaleString(),
-            subtitle: "In catalog",
+            title: summary ? "Total Sales" : "Unique Products",
+            value: summary ? formatMoney(summary.totalSales) : totalProducts.toLocaleString(),
+            subtitle: summary ? `${Number(summary.transactionCount || 0).toLocaleString()} transactions` : "In catalog",
             icon: <Package size={22} />,
             color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5",
         },
         {
-            title: "Total Stock Volume",
-            value: totalStock.toLocaleString(),
-            subtitle: "Units in warehouse",
+            title: summary ? "Stock Movement" : "Total Stock Volume",
+            value: summary ? Number(summary.stockMovementCount || 0).toLocaleString() : totalStock.toLocaleString(),
+            subtitle: summary ? "Inventory logs recorded" : "Units in warehouse",
             icon: <Layers size={22} />,
             color: "text-blue-400 border-blue-500/20 bg-blue-500/5",
         },
         {
-            title: "Total Asset Value",
-            value: `₱${totalValue.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            subtitle: "Cumulative cost basis",
+            title: summary ? "Top Category" : "Total Asset Value",
+            value: summary ? (summary.topCategory || "N/A") : formatMoney(totalValue),
+            subtitle: summary ? "Highest contribution" : "Cumulative cost basis",
             icon: <Wallet size={22} />,
             color: "text-violet-400 border-violet-500/20 bg-violet-500/5",
         },
         {
-            title: "Sales Revenue Today",
-            value: `₱${revenueToday.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            subtitle: `${salesToday.length} completed transactions`,
+            title: summary ? "Top Supplier" : "Sales Revenue Today",
+            value: summary ? (summary.topSupplier || "N/A") : formatMoney(revenueToday),
+            subtitle: summary ? "Highest contribution" : `${salesToday.length} completed transactions`,
             icon: <TrendingUp size={22} />,
             color: "text-amber-400 border-amber-500/20 bg-amber-500/5",
         },
         {
             title: "Low Stock Items",
-            value: lowStockCount.toString(),
+            value: effectiveLowStock.toString(),
             subtitle: "Needs immediate replenishment",
             icon: <AlertTriangle size={22} />,
-            color: lowStockCount > 0 
-                ? "text-rose-400 border-rose-500/30 bg-rose-500/10 animate-pulse" 
+            color: effectiveLowStock > 0
+                ? "text-rose-400 border-rose-500/30 bg-rose-500/10 animate-pulse"
                 : "text-gray-400 border-[var(--border)] bg-[var(--card-bg)]",
-        }
+        },
     ];
 
     return (

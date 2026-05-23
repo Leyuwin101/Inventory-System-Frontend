@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function AuthInput({
     label,
     type = "text",
@@ -8,8 +6,8 @@ export default function AuthInput({
     placeholder
 }) {
     return (
-        <div className="flex flex-col gap-1">
-            <label className="text-sm text-[var(--muted)]">
+        <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-semibold text-[var(--muted)]">
                 {label}
             </label>
 
@@ -34,8 +32,9 @@ export default function AuthInput({
 
                     focus:border-[var(--accent)]
                     focus:ring-2 focus:ring-emerald-500/20
+                    hover:border-emerald-500/40
 
-                    outline-none
+                    outline-none transition duration-200
                 "
             />
         </div>

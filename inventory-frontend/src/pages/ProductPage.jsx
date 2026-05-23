@@ -1,6 +1,8 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
-import { getProducts, createProduct, updateProduct, deleteProduct, updateStock } from "../api/products";
+import { getAllProducts, createProduct, updateProduct, deleteProduct, updateStock } from "../api/products";
+import { getAllCategories } from "../api/categories";
 import ProductTable from "../components/products/ProductTable";
 import Toolbar from "../components/products/Toolbar";
 import ProductModal from "../components/products/ProductModal";
@@ -9,19 +11,38 @@ import DeleteConfirm from "../components/products/DeleteConfirm";
 import ProductSuppliersModal from "../components/products/ProductSuppliersModal";
 import { AlertCircle, RefreshCw, Package, Loader2 } from "lucide-react";
 import { clearPageCache, getPageCache, setPageCache } from "../store/pageCache";
+import useDebouncedValue from "../hooks/useDebouncedValue";
+import { exportToCsv, exportToPdf } from "../utils/exportUtils";
 
 const ITEMS_PER_PAGE = 10;
+const PRODUCT_FILTER_KEY = "products:filters";
+
+const getProductCategoryId = (product) =>
+    String(product.categoryId || product.category_id || product.category?.id || product.category?.categoryId || "");
+
+const getProductStock = (product) => Number(product.stockQuantity ?? product.stock_quantity ?? product.stock ?? 0);
+
+const getProductMinimumStock = (product) => Number(product.minimumStock ?? product.minimum_stock ?? product.reorderLevel ?? 0);
+
+const productExportColumns = [
+    { header: "Name", accessor: (product) => product.name || "Unnamed product" },
+    { header: "SKU", accessor: (product) => product.sku || "" },
+    { header: "Category", accessor: (product) => product.categoryName || product.category?.name || "Uncategorized" },
+    { header: "Price", accessor: (product) => Number(product.price || 0).toFixed(2) },
+    { header: "Stock", accessor: (product) => getProductStock(product) },
+    { header: "Minimum Stock", accessor: (product) => getProductMinimumStock(product) },
+];
 
 export default function ProductPage() {
-    const initialCache = getPageCache("products:1:");
-    const [products, setProducts] = useState(initialCache?.products || []);
+    const savedFilters = getPageCache(PRODUCT_FILTER_KEY) || {};
+    const initialCache = getPageCache("products:all-page");
+    const [allProducts, setAllProducts] = useState(initialCache?.products || []);
+    const [categories, setCategories] = useState(initialCache?.categories || []);
     const [loading, setLoading] = useState(!initialCache);
     const [error, setError] = useState(null);
-    const [search, setSearch] = useState("");
-    const [debouncedSearch, setDebouncedSearch] = useState("");
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalItems, setTotalItems] = useState(0);
+    const [search, setSearch] = useState(savedFilters.search || "");
+    const [filters, setFilters] = useState(savedFilters.filters || { categoryId: "", stockStatus: "" });
+    const [page, setPage] = useState(savedFilters.page || 1);
 
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
@@ -31,92 +52,104 @@ export default function ProductPage() {
     const [modalLoading, setModalLoading] = useState(false);
 
     const activeFetchRef = useRef(0);
-    const loadingRef = useRef(false);
     const mountedRef = useRef(false);
+    const debouncedSearch = useDebouncedValue(search, 300);
 
-    // Debounce search input to debouncedSearch state
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(search);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [search]);
+        setPageCache(PRODUCT_FILTER_KEY, { search, filters, page });
+    }, [search, filters, page]);
 
-    // When debounced search changes, reset page to 1
-    useEffect(() => {
-        setPage(1);
-    }, [debouncedSearch]);
+    const filteredProducts = useMemo(() => {
+        const query = debouncedSearch.trim().toLowerCase();
+        return allProducts.filter((product) => {
+            const matchesQuery = !query || [
+                product.name,
+                product.sku,
+                product.categoryName,
+                product.category?.name,
+            ].some((value) => String(value || "").toLowerCase().includes(query));
 
-    // Load products when page or debouncedSearch changes
-    useEffect(() => {
-        loadProducts(page, debouncedSearch);
-    }, [page, debouncedSearch]);
+            const matchesCategory = !filters.categoryId || getProductCategoryId(product) === String(filters.categoryId);
+            const stock = getProductStock(product);
+            const minimumStock = getProductMinimumStock(product);
+            const matchesStock =
+                !filters.stockStatus ||
+                (filters.stockStatus === "out-of-stock" && stock <= 0) ||
+                (filters.stockStatus === "low-stock" && stock > 0 && stock <= minimumStock) ||
+                (filters.stockStatus === "in-stock" && stock > Math.max(minimumStock, 0));
 
-    const loadProducts = async (pageNum = page, searchQuery = debouncedSearch) => {
-        const cacheKey = `products:${pageNum}:${searchQuery}`;
-        const cached = getPageCache(cacheKey);
+            return matchesQuery && matchesCategory && matchesStock;
+        });
+    }, [allProducts, debouncedSearch, filters]);
+
+    const totalItems = filteredProducts.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+    const currentPage = Math.min(page, totalPages);
+    const products = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredProducts.slice(start, start + ITEMS_PER_PAGE);
+    }, [currentPage, filteredProducts]);
+
+    const loadProducts = useCallback(async ({ force = false } = {}) => {
+        const cached = getPageCache("products:all-page");
         if (cached) {
-            setProducts(cached.products);
-            setTotalPages(cached.totalPages);
-            setTotalItems(cached.totalItems);
+            setAllProducts(cached.products);
+            setCategories(cached.categories || []);
             setLoading(false);
-            return;
+            if (!force) return;
         }
 
-        if (loadingRef.current) return;
-        loadingRef.current = true;
         activeFetchRef.current += 1;
         const currentFetchId = activeFetchRef.current;
 
         try {
-            setLoading(true);
+            if (!allProducts.length) setLoading(true);
             setError(null);
-            const data = await getProducts(pageNum, ITEMS_PER_PAGE, searchQuery);
+            const [productRows, categoryRows] = await Promise.all([
+                getAllProducts(),
+                getAllCategories().catch(() => []),
+            ]);
             
             if (currentFetchId !== activeFetchRef.current || !mountedRef.current) return;
 
-            // Handle both paginated and non-paginated responses
-            if (data.products) {
-                setProducts(data.products);
-                setTotalPages(data.totalPages || 1);
-                setTotalItems(data.totalItems || 0);
-                setPageCache(cacheKey, {
-                    products: data.products,
-                    totalPages: data.totalPages || 1,
-                    totalItems: data.totalItems || 0,
-                });
-            } else {
-                // Legacy non-paginated response
-                setProducts(data.data || data);
-                setTotalPages(1);
-                setTotalItems(Array.isArray(data.data || data) ? (data.data || data).length : 0);
-                setPageCache(cacheKey, {
-                    products: data.data || data,
-                    totalPages: 1,
-                    totalItems: Array.isArray(data.data || data) ? (data.data || data).length : 0,
-                });
-            }
+            const nextProducts = Array.isArray(productRows) ? productRows : [];
+            const nextCategories = Array.isArray(categoryRows) ? categoryRows : [];
+            setAllProducts(nextProducts);
+            setCategories(nextCategories);
+            setPageCache("products:all-page", { products: nextProducts, categories: nextCategories });
         } catch (err) {
             if (currentFetchId !== activeFetchRef.current || !mountedRef.current) return;
             console.error(err);
             setError(err.response?.data?.message || "Failed to load products");
         } finally {
-            loadingRef.current = false;
             if (currentFetchId === activeFetchRef.current && mountedRef.current) {
                 setLoading(false);
             }
         }
-    };
+    }, [allProducts.length]);
 
     useEffect(() => {
         mountedRef.current = true;
+        loadProducts();
         return () => {
             mountedRef.current = false;
         };
-    }, []);
+    }, [loadProducts]);
 
     const handleSearch = useCallback((query) => {
         setSearch(query);
+        setPage(1);
+    }, []);
+
+    const handleFilterChange = useCallback((key, value) => {
+        setPage(1);
+        setFilters((prev) => ({ ...prev, [key]: value }));
+    }, []);
+
+    const handleClearFilters = useCallback(() => {
+        setSearch("");
+        setFilters({ categoryId: "", stockStatus: "" });
+        setPage(1);
     }, []);
 
     const handlePageChange = useCallback((newPage) => {
@@ -161,7 +194,7 @@ export default function ProductPage() {
             clearPageCache("products:");
             clearPageCache("dashboard");
             setIsProductModalOpen(false);
-            loadProducts(page, search);
+            loadProducts({ force: true });
         } catch (err) {
             console.error(err);
             alert(err.response?.data?.message || "Failed to save product");
@@ -177,7 +210,7 @@ export default function ProductPage() {
             clearPageCache("products:");
             clearPageCache("dashboard");
             setIsStockModalOpen(false);
-            loadProducts(page, search);
+            loadProducts({ force: true });
         } catch (err) {
             console.error(err);
             alert(err.response?.data?.message || "Failed to update stock");
@@ -194,7 +227,7 @@ export default function ProductPage() {
             clearPageCache("products:");
             clearPageCache("dashboard");
             setIsDeleteModalOpen(false);
-            loadProducts(page, search);
+            loadProducts({ force: true });
         } catch (err) {
             console.error(err);
             alert(err.response?.data?.message || "Failed to delete product");
@@ -202,6 +235,16 @@ export default function ProductPage() {
             setModalLoading(false);
         }
     };
+
+    const exportSubtitle = `${filteredProducts.length} product${filteredProducts.length === 1 ? "" : "s"} matching current search and filters`;
+
+    const handleExportCsv = useCallback(() => {
+        exportToCsv({ title: "Products", columns: productExportColumns, rows: filteredProducts });
+    }, [filteredProducts]);
+
+    const handleExportPdf = useCallback(() => {
+        exportToPdf({ title: "Products", subtitle: exportSubtitle, columns: productExportColumns, rows: filteredProducts });
+    }, [exportSubtitle, filteredProducts]);
 
     return (
         <DashboardLayout>
@@ -219,7 +262,17 @@ export default function ProductPage() {
 
         {/* SEARCH TOOLBAR */}
         <div className="mb-4 sm:mb-6">
-            <Toolbar onSearch={handleSearch} onCreate={handleCreateProduct} />
+            <Toolbar
+                onSearch={handleSearch}
+                onCreate={handleCreateProduct}
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                categories={categories}
+                onClearFilters={handleClearFilters}
+                onExportCsv={handleExportCsv}
+                onExportPdf={handleExportPdf}
+                exportDisabled={filteredProducts.length === 0}
+            />
         </div>
 
         {/* ERROR ALERT */}
@@ -231,7 +284,7 @@ export default function ProductPage() {
                 </div>
                 <div className="flex items-center gap-2 self-end sm:self-auto">
                     <button
-                        onClick={() => loadProducts(page, search)}
+                        onClick={() => loadProducts({ force: true })}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 transition text-sm whitespace-nowrap"
                     >
                         <RefreshCw size={16} />
@@ -251,7 +304,7 @@ export default function ProductPage() {
         <ProductTable
             products={products}
             loading={loading}
-            refresh={() => loadProducts(page, search)}
+            refresh={() => loadProducts({ force: true })}
             onEdit={handleEditProduct}
             onStock={handleStockModal}
             onDelete={handleDeleteModal}
@@ -262,13 +315,13 @@ export default function ProductPage() {
         {!loading && products.length > 0 && (
             <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-lg bg-[var(--card-bg)] border border-[var(--border)]">
                 <div className="text-sm text-[var(--muted)] order-2 sm:order-1">
-                    Showing {((page - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(page * ITEMS_PER_PAGE, totalItems)} of {totalItems} products
+                    Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} of {totalItems} products
                 </div>
                 
                 <div className="flex items-center gap-2 order-1 sm:order-2">
                     <button
-                        onClick={() => handlePageChange(page - 1)}
-                        disabled={page === 1}
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
                         className="px-3 py-1.5 text-sm rounded-lg bg-[var(--input-bg)] border border-[var(--border)] hover:bg-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
                         Previous
@@ -282,7 +335,7 @@ export default function ProductPage() {
                                     key={pageNum}
                                     onClick={() => handlePageChange(pageNum)}
                                     className={`w-8 h-8 text-sm rounded-lg transition ${
-                                        page === pageNum
+                                        currentPage === pageNum
                                         ? "bg-[var(--accent)] text-[var(--accent-text)]"
                                         : "bg-[var(--input-bg)] border border-[var(--border)] hover:bg-[var(--border)]"
                                     }`}
@@ -294,8 +347,8 @@ export default function ProductPage() {
                     </div>
                     
                     <button
-                        onClick={() => handlePageChange(page + 1)}
-                        disabled={page === totalPages}
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
                         className="px-3 py-1.5 text-sm rounded-lg bg-[var(--input-bg)] border border-[var(--border)] hover:bg-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
                         Next
@@ -347,7 +400,7 @@ export default function ProductPage() {
             onUpdate={() => {
                 clearPageCache("products:");
                 clearPageCache("dashboard");
-                loadProducts(page, search);
+                loadProducts({ force: true });
             }}
         />
         </DashboardLayout>

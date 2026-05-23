@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { createSale } from "../../api/sales";
 import { 
     ShoppingCart, 
@@ -72,6 +72,12 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
     const handleCheckout = async (e) => {
         e.preventDefault();
         if (cart.length === 0) return;
+
+        const userId = currentUser?.id ?? currentUser?.userID ?? currentUser?.userId ?? currentUser?.user_id;
+        if (!userId) {
+            alert("Your account id could not be verified. Please log out and sign in again.");
+            return;
+        }
         
         const change = Number(receivedAmount) - cartTotal;
         if (receivedAmount && change < 0) {
@@ -84,10 +90,10 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
             
             // Format SaleRequest items: { productId, quantity }
             const payload = {
+                userId,
                 paymentMethod: "CASH",
                 status: "COMPLETED",
                 items: cart.map((item) => ({
-                    productID: item.product_id || item.id,
                     productId: item.product_id || item.id,
                     quantity: item.qty
                 }))
@@ -119,9 +125,9 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
     );
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-6 items-start animate-fade-in">
             {/* LEFT PANEL: PRODUCT CATALOG SEARCH */}
-            <div className="lg:col-span-7 bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-5 h-[70vh] flex flex-col justify-between">
+            <div className="xl:col-span-7 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-4 sm:p-5 min-h-[420px] xl:h-[70vh] flex flex-col justify-between">
                 <div>
                     <div className="relative mb-4">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
@@ -130,11 +136,11 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
                             placeholder="Search product code or name..."
                             value={productSearch}
                             onChange={(e) => setProductSearch(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-h)] focus:outline-none"
+                            className="w-full pl-9 pr-4 py-2 rounded-md bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-h)] focus:outline-none"
                         />
                     </div>
 
-                    <div className="overflow-y-auto max-h-[50vh] pr-2 space-y-2">
+                    <div className="overflow-y-auto max-h-[52vh] xl:max-h-[50vh] pr-1 sm:pr-2 space-y-2">
                         {filteredProducts.length === 0 ? (
                             <div className="text-center py-10 text-xs text-[var(--muted)]">
                                 No products match your search.
@@ -149,7 +155,7 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
                                         key={pId}
                                         onClick={() => !outOfStock && addToCart(p)}
                                         className={`
-                                            p-3 rounded-lg border border-[var(--border)]
+                                            p-3 rounded-md border border-[var(--border)]
                                             flex items-center justify-between
                                             transition select-none
                                             ${outOfStock 
@@ -180,15 +186,15 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
                     </div>
                 </div>
 
-                <div className="border-t border-[var(--border)] pt-3 text-[10px] text-[var(--muted)] flex justify-between">
+                <div className="border-t border-[var(--border)] pt-3 text-[10px] text-[var(--muted)] flex flex-col sm:flex-row sm:justify-between gap-1">
                     <span>SariStore POS terminal operational</span>
                     <span>Logged in as: <span className="text-[var(--text-h)] font-medium">{currentUser?.username || currentUser?.email}</span></span>
                 </div>
             </div>
 
             {/* RIGHT PANEL: CART & CHECKOUT PANEL */}
-            <form onSubmit={handleCheckout} className="lg:col-span-5 bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-5 flex flex-col justify-between h-[70vh]">
-                <div className="flex flex-col h-[40vh]">
+            <form onSubmit={handleCheckout} className="xl:col-span-5 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-4 sm:p-5 flex flex-col justify-between min-h-[420px] xl:h-[70vh]">
+                <div className="flex flex-col min-h-[240px] xl:h-[40vh]">
                     <h3 className="text-xs font-semibold text-[var(--text-h)] mb-3 pb-2 border-b border-[var(--border)] flex justify-between items-center">
                         <span>Shopping Cart ({cart.reduce((acc, i) => acc + i.qty, 0)})</span>
                         {cart.length > 0 && (

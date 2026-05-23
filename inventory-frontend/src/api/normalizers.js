@@ -27,7 +27,8 @@ export const normalizeProductSupplier = (supplier = {}) => ({
     id: supplier.id ?? supplier.supplierID ?? supplier.supplierId ?? supplier.supplier_id,
     supplier_id: supplier.supplier_id ?? supplier.supplierID ?? supplier.supplierId ?? supplier.id,
     supplierId: supplier.supplierId ?? supplier.supplierID ?? supplier.supplier_id ?? supplier.id,
-    name: supplier.name ?? "",
+    name: supplier.name ?? supplier.supplierName ?? "",
+    supplierName: supplier.supplierName ?? supplier.name ?? "",
     companyName: supplier.companyName ?? supplier.company_name ?? "",
     company_name: supplier.company_name ?? supplier.companyName ?? "",
     price: supplier.price ?? supplier.supplierPrice ?? supplier.supplier_price ?? 0,
@@ -87,9 +88,9 @@ export const normalizeSupplier = (supplier = {}) => ({
 
 export const normalizeSale = (sale = {}) => ({
     ...sale,
-    id: sale.id ?? sale.salesID ?? sale.saleId ?? sale.sale_id,
-    saleId: sale.saleId ?? sale.salesID ?? sale.sale_id ?? sale.id,
-    sale_id: sale.sale_id ?? sale.salesID ?? sale.saleId ?? sale.id,
+    id: sale.id ?? sale.saleId ?? sale.saleID ?? sale.salesID ?? sale.sale_id ?? sale.sales_id,
+    saleId: sale.saleId ?? sale.saleID ?? sale.salesID ?? sale.sale_id ?? sale.sales_id ?? sale.id,
+    sale_id: sale.sale_id ?? sale.saleId ?? sale.saleID ?? sale.salesID ?? sale.sales_id ?? sale.id,
     userId: sale.userId ?? sale.user?.userID ?? sale.user?.userId ?? sale.user?.id,
     username: sale.username ?? sale.user?.username,
     cashierName: sale.cashierName ?? sale.user?.username,

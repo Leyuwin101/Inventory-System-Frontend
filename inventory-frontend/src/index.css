@@ -90,6 +90,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  overflow-x: hidden;
 }
 
 #root {
@@ -135,6 +136,31 @@ select option {
 
 button svg {
   color: currentColor;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 320px;
 }
 
 code,

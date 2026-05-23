@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2, X, Plus, Trash2, Truck, DollarSign, Calendar } from "lucide-react";
 import { getAllSuppliers } from "../../api/suppliers";
 import { assignSupplierToProduct, removeSupplierFromProduct, getProductById } from "../../api/products";
@@ -16,13 +16,7 @@ export default function ProductSuppliersModal({ open, onClose, product, onUpdate
         leadTime: "3"
     });
 
-    useEffect(() => {
-        if (open && product) {
-            loadSuppliersAndProduct();
-        }
-    }, [open, product]);
-
-    const loadSuppliersAndProduct = async () => {
+    const loadSuppliersAndProduct = useCallback(async () => {
         try {
             setLoading(true);
             const productId = product.product_id || product.id;
@@ -40,7 +34,17 @@ export default function ProductSuppliersModal({ open, onClose, product, onUpdate
         } finally {
             setLoading(false);
         }
-    };
+    }, [product]);
+
+    useEffect(() => {
+        if (open && product) {
+            const timeoutId = window.setTimeout(() => {
+                loadSuppliersAndProduct();
+            }, 0);
+
+            return () => window.clearTimeout(timeoutId);
+        }
+    }, [loadSuppliersAndProduct, open, product]);
 
     if (!open) return null;
 
@@ -53,12 +57,9 @@ export default function ProductSuppliersModal({ open, onClose, product, onUpdate
             const productId = currentProduct?.product_id || currentProduct?.id;
             
             const payload = {
-                supplierID: Number(form.supplierId),
                 supplierId: Number(form.supplierId),
                 supplierPrice: Number(form.price),
-                price: Number(form.price),
                 leadTimeDays: Number(form.leadTime) || 3,
-                leadTime: Number(form.leadTime) || 3
             };
 
             await assignSupplierToProduct(productId, payload);
@@ -169,7 +170,7 @@ export default function ProductSuppliersModal({ open, onClose, product, onUpdate
                                                             {sup.name || "Unknown Supplier"}
                                                         </td>
                                                         <td className="p-3 text-[var(--accent)] font-semibold">
-                                                            ₱{Number(sup.pivot?.price || sup.price || sup.supplierPrice || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                                            PHP {Number(sup.pivot?.price || sup.price || sup.supplierPrice || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                                                         </td>
                                                         <td className="p-3">
                                                             {sup.pivot?.leadTime || sup.leadTime || sup.leadTimeDays || 3} days
@@ -236,7 +237,7 @@ export default function ProductSuppliersModal({ open, onClose, product, onUpdate
 
                                 <div>
                                     <label className="block text-xs text-[var(--muted)] mb-1.5 flex items-center gap-1">
-                                        <DollarSign size={12} /> Contract Price (₱) *
+                                        <DollarSign size={12} /> Contract Price (PHP) *
                                     </label>
                                     <input
                                         type="number"

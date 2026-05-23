@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useAuth } from "../components/context/AuthContext";
 import { getAllProducts } from "../api/products";
@@ -17,17 +17,21 @@ import PosTerminal from "../components/sales/PosTerminal";
 import SalesLedger from "../components/sales/SalesLedger";
 import { clearPageCache, getPageCache, setPageCache } from "../store/pageCache";
 
+const getSaleId = (sale = {}) =>
+    sale.id ?? sale.saleId ?? sale.saleID ?? sale.salesID ?? sale.sale_id ?? sale.sales_id;
+
 export default function SalesPage() {
     const { user: currentUser } = useAuth();
     const role = currentUser?.role?.replace("ROLE_", "").toUpperCase() || "";
     const cacheKey = `sales-page:${role}:${currentUser?.userID || currentUser?.userId || currentUser?.id || "unknown"}`;
     const cachedSalesPage = getPageCache(cacheKey);
+    const defaultActiveTab = role === "CASHIER" ? "pos" : "history";
 
     const [sales, setSales] = useState(cachedSalesPage?.sales || []);
     const [products, setProducts] = useState(cachedSalesPage?.products || []);
     const [loading, setLoading] = useState(!cachedSalesPage);
     const [error, setError] = useState(null);
-    const [activeTab, setActiveTab] = useState("history"); // pos vs history
+    const [activeTab, setActiveTab] = useState(defaultActiveTab); // pos vs history
     const [successMessage, setSuccessMessage] = useState(null);
 
     const activeFetchRef = useRef(0);
@@ -38,24 +42,7 @@ export default function SalesPage() {
     const isAdminOrManager = ["ADMIN", "MANAGER"].includes(role);
     const canCheckout = ["ADMIN", "CASHIER"].includes(role);
 
-    useEffect(() => {
-        mountedRef.current = true;
-        // Default cashiers to POS screen, admins/managers to Ledger screen
-        if (canCheckout && !isAdminOrManager) {
-            setActiveTab("pos");
-        } else {
-            setActiveTab("history");
-        }
-        if (!cachedSalesPage) {
-            loadInitialData();
-        }
-
-        return () => {
-            mountedRef.current = false;
-        };
-    }, [currentUser]);
-
-    const loadInitialData = async () => {
+    const loadInitialData = useCallback(async () => {
         if (!currentUser || loadingRef.current) return;
         loadingRef.current = true;
         activeFetchRef.current += 1;
@@ -100,7 +87,18 @@ export default function SalesPage() {
                 setLoading(false);
             }
         }
-    };
+    }, [cacheKey, canCheckout, currentUser, isAdminOrManager]);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        if (!cachedSalesPage) {
+            Promise.resolve().then(loadInitialData);
+        }
+
+        return () => {
+            mountedRef.current = false;
+        };
+    }, [cachedSalesPage, loadInitialData]);
 
     const handleCheckoutSuccess = (successReceipt) => {
         setSuccessMessage(successReceipt);
@@ -110,7 +108,12 @@ export default function SalesPage() {
     };
 
     const handleCancelSale = async (sale) => {
-        const sId = sale.id || sale.saleId || sale.sale_id;
+        const sId = getSaleId(sale);
+        if (!sId) {
+            alert("Unable to cancel this sale because its sale ID is missing.");
+            return;
+        }
+
         if (!window.confirm(`Are you sure you want to refund/cancel Sale #${sId}? This will reverse inventory stock.`)) return;
 
         try {
@@ -118,7 +121,7 @@ export default function SalesPage() {
             await cancelSale(sId);
             clearPageCache("sales-page:");
             clearPageCache("dashboard");
-            loadInitialData();
+            await loadInitialData();
         } catch (err) {
             console.error(err);
             alert(err.response?.data?.message || "Failed to cancel/refund sale");
