@@ -1,5 +1,5 @@
-import React from "react";
-import { Receipt, Clock, User, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Receipt, Clock, ArrowRight } from "lucide-react";
 
 export default function RecentActivity({ sales = [] }) {
     // Sort sales by date/id descending, take top 5
@@ -73,8 +73,8 @@ export default function RecentActivity({ sales = [] }) {
                 })}
             </div>
             
-            <a 
-                href="/sales" 
+            <Link
+                to="/sales"
                 className="
                     mt-4 pt-3 border-t border-[var(--border)]
                     text-xs font-medium text-[var(--accent)] hover:underline
@@ -83,7 +83,7 @@ export default function RecentActivity({ sales = [] }) {
             >
                 View all transactions
                 <ArrowRight size={12} />
-            </a>
+            </Link>
         </div>
     );
 }

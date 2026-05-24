@@ -147,14 +147,14 @@ export default function SalesPage() {
                 </div>
 
                 {/* TAB CONTROLS */}
-                <div className="flex bg-[var(--input-bg)] p-1 rounded-lg border border-[var(--border)]">
+                <div className="grid w-full grid-cols-1 gap-1 rounded-lg border border-[var(--border)] bg-[var(--input-bg)] p-1 sm:w-auto sm:grid-flow-col sm:auto-cols-max">
                     {canCheckout && (
                         <button
                             onClick={() => {
                                 setActiveTab("pos");
                                 setSuccessMessage(null);
                             }}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                            className={`min-h-11 px-3 py-1.5 text-xs font-semibold rounded-md transition ${
                                 activeTab === "pos"
                                     ? "bg-[var(--accent)] text-[var(--accent-text)]"
                                     : "text-[var(--muted)] hover:text-[var(--text-h)]"
@@ -165,7 +165,7 @@ export default function SalesPage() {
                     )}
                     <button
                         onClick={() => setActiveTab("history")}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                        className={`min-h-11 px-3 py-1.5 text-xs font-semibold rounded-md transition ${
                             activeTab === "history"
                                     ? "bg-[var(--accent)] text-[var(--accent-text)]"
                                     : "text-[var(--muted)] hover:text-[var(--text-h)]"

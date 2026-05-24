@@ -1,5 +1,5 @@
-import React from "react";
-import { Package, AlertCircle, ArrowRight, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Package, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function LowStockAlerts({ lowStockProducts = [] }) {
     if (lowStockProducts.length === 0) {
@@ -56,8 +56,8 @@ export default function LowStockAlerts({ lowStockProducts = [] }) {
                 })}
             </div>
 
-            <a 
-                href="/products" 
+            <Link
+                to="/products"
                 className="
                     mt-4 pt-3 border-t border-[var(--border)]
                     text-xs font-medium text-[var(--accent)] hover:underline
@@ -66,7 +66,7 @@ export default function LowStockAlerts({ lowStockProducts = [] }) {
             >
                 Restock catalog products
                 <ArrowRight size={12} />
-            </a>
+            </Link>
         </div>
     );
 }

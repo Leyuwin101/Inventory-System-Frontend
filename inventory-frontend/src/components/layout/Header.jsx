@@ -1,10 +1,22 @@
+import { memo } from "react";
 import { useAuth } from "../context/AuthContext";
 import { User, Mail, Shield, Menu } from "lucide-react";
 
-export default function Header({ onMenuClick }) {
-    const { user, loading } = useAuth();
+const isEmailLike = (value = "") => String(value).includes("@");
+const isRoleLike = (value = "") => {
+    const normalized = String(value || "").replace("ROLE_", "").toUpperCase();
+    return ["ADMIN", "MANAGER", "CASHIER", "INVENTORY_CLERK", "STANDARD_USER", "MEMBER"].includes(normalized);
+};
+const getMemberName = (user = {}) => {
+    const value = String(user.username || user.name || "").trim();
+    return value && !isEmailLike(value) && !isRoleLike(value) ? value : "";
+};
 
-    if (loading) return (
+function Header({ onMenuClick }) {
+    const { user, loading } = useAuth();
+    const memberName = getMemberName(user);
+
+    if (loading || (user && !memberName)) return (
         <div className="w-full mb-4 sm:mb-6 p-4 sm:p-5 rounded-xl bg-[var(--card-bg)] border border-[var(--border)] animate-pulse">
             <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-[var(--border)] rounded-xl"></div>
@@ -18,20 +30,20 @@ export default function Header({ onMenuClick }) {
 
     if (!user) return null;
 
-    const initials = user.name
-        ? user.name.split(" ").map((n) => n[0]).join("")
+    const initials = memberName
+        ? memberName.split(" ").map((n) => n[0]).join("")
         : user.email?.[0]?.toUpperCase() || "?";
 
     return (
         <div
             className="
                 w-full mb-4 sm:mb-6
-                p-3 sm:p-5
+                p-3 sm:p-4 md:p-5
                 rounded-lg
                 bg-[var(--card-bg)]
                 border border-[var(--border)]
                 shadow-[var(--shadow)]
-                flex items-center justify-between
+                flex flex-col items-stretch justify-between sm:flex-row sm:items-center
                 gap-3 sm:gap-4
             "
         >
@@ -40,8 +52,8 @@ export default function Header({ onMenuClick }) {
                 {/* HAMBURGER TRIGGER FOR MOBILE */}
                 <button
                     onClick={onMenuClick}
-                    className="lg:hidden p-2 rounded-md hover:bg-[var(--input-bg)] text-[var(--muted)] hover:text-[var(--text-h)] border border-[var(--border)] transition flex-shrink-0"
-                    aria-label="Open Sidebar"
+                    className="lg:hidden min-h-11 min-w-11 rounded-md hover:bg-[var(--input-bg)] text-[var(--muted)] hover:text-[var(--text-h)] border border-[var(--border)] transition flex-shrink-0 inline-flex items-center justify-center"
+                    aria-label="Open navigation"
                 >
                     <Menu size={20} />
                 </button>
@@ -67,7 +79,7 @@ export default function Header({ onMenuClick }) {
                     <div className="flex items-center gap-2">
                         <User size={14} className="text-[var(--muted)] hidden sm:block" />
                         <p className="text-base sm:text-lg md:text-xl font-semibold text-[var(--text-h)] truncate">
-                            {user.name || "Unknown User"}
+                            {memberName ? `Welcome, ${memberName}` : "Welcome"}
                         </p>
                     </div>
 
@@ -81,7 +93,7 @@ export default function Header({ onMenuClick }) {
             </div>
 
             {/* RIGHT SIDE - ROLE BADGE */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 sm:justify-end">
                 <div className="flex items-center gap-2 px-2.5 py-2 sm:px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)]">
                     <Shield size={14} className="text-[var(--accent)]" />
                     <span
@@ -100,3 +112,5 @@ export default function Header({ onMenuClick }) {
         </div>
     );
 }
+
+export default memo(Header);

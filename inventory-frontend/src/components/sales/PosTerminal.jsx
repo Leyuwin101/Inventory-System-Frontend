@@ -125,9 +125,9 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
     );
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-6 items-start animate-fade-in">
+        <div className="grid grid-cols-1 gap-4 lg:gap-6 xl:grid-cols-12 xl:items-start animate-fade-in">
             {/* LEFT PANEL: PRODUCT CATALOG SEARCH */}
-            <div className="xl:col-span-7 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-4 sm:p-5 min-h-[420px] xl:h-[70vh] flex flex-col justify-between">
+            <div className="xl:col-span-7 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-3 sm:p-5 min-h-[360px] xl:h-[70vh] flex flex-col justify-between">
                 <div>
                     <div className="relative mb-4">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={16} />
@@ -136,11 +136,11 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
                             placeholder="Search product code or name..."
                             value={productSearch}
                             onChange={(e) => setProductSearch(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 rounded-md bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-h)] focus:outline-none"
+                            className="w-full pl-9 pr-4 py-2 rounded-md bg-[var(--input-bg)] border border-[var(--border)] text-sm text-[var(--text-h)] focus:outline-none"
                         />
                     </div>
 
-                    <div className="overflow-y-auto max-h-[52vh] xl:max-h-[50vh] pr-1 sm:pr-2 space-y-2">
+                    <div className="overflow-y-auto max-h-[52dvh] xl:max-h-[50vh] pr-1 sm:pr-2 space-y-2">
                         {filteredProducts.length === 0 ? (
                             <div className="text-center py-10 text-xs text-[var(--muted)]">
                                 No products match your search.
@@ -156,7 +156,7 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
                                         onClick={() => !outOfStock && addToCart(p)}
                                         className={`
                                             p-3 rounded-md border border-[var(--border)]
-                                            flex items-center justify-between
+                                            flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between
                                             transition select-none
                                             ${outOfStock 
                                                 ? "opacity-50 cursor-not-allowed bg-red-950/10 border-red-500/10" 
@@ -168,7 +168,7 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
                                             <h4 className="font-semibold text-xs text-[var(--text-h)] truncate">{p.name}</h4>
                                             <span className="text-[10px] text-[var(--muted)]">SKU: {p.sku || "N/A"}</span>
                                         </div>
-                                        <div className="flex items-center gap-3 text-right">
+                                        <div className="flex w-full items-center justify-between gap-3 text-right sm:w-auto">
                                             <div>
                                                 <div className="font-bold text-xs text-[var(--accent)]">₱{Number(p.price).toFixed(2)}</div>
                                                 <span className={`text-[9px] ${p.stock_quantity <= 5 ? "text-red-400 font-semibold animate-pulse" : "text-[var(--muted)]"}`}>
@@ -193,7 +193,7 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
             </div>
 
             {/* RIGHT PANEL: CART & CHECKOUT PANEL */}
-            <form onSubmit={handleCheckout} className="xl:col-span-5 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-4 sm:p-5 flex flex-col justify-between min-h-[420px] xl:h-[70vh]">
+            <form onSubmit={handleCheckout} className="xl:col-span-5 bg-[var(--card-bg)] border border-[var(--border)] rounded-lg p-3 sm:p-5 flex flex-col justify-between min-h-[360px] xl:sticky xl:top-6 xl:h-[70vh]">
                 <div className="flex flex-col min-h-[240px] xl:h-[40vh]">
                     <h3 className="text-xs font-semibold text-[var(--text-h)] mb-3 pb-2 border-b border-[var(--border)] flex justify-between items-center">
                         <span>Shopping Cart ({cart.reduce((acc, i) => acc + i.qty, 0)})</span>
@@ -304,7 +304,7 @@ export default function PosTerminal({ products, currentUser, onCheckoutSuccess }
                         type="submit"
                         disabled={checkoutLoading || cart.length === 0}
                         className="
-                            w-full py-2.5 rounded-lg
+                            w-full py-3 rounded-lg
                             bg-[var(--accent)] text-[var(--accent-text)]
                             font-bold text-xs uppercase tracking-wider
                             hover:opacity-90 disabled:opacity-50 transition

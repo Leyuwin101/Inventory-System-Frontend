@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Truck, X, Loader2 } from "lucide-react";
 
 export default function SupplierModal({ isOpen, onClose, selectedSupplier, onSave, loading }) {
@@ -45,8 +45,8 @@ export default function SupplierModal({ isOpen, onClose, selectedSupplier, onSav
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="w-full max-w-lg p-6 rounded-xl bg-[var(--card-bg)] border border-[var(--border)] shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 p-0 sm:items-center sm:p-4">
+            <div className="w-full max-w-lg p-4 sm:p-6 rounded-t-2xl sm:rounded-xl bg-[var(--card-bg)] border border-[var(--border)] shadow-2xl max-h-[92dvh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-2">
                         <Truck className="text-[var(--accent)]" size={20} />
@@ -123,7 +123,7 @@ export default function SupplierModal({ isOpen, onClose, selectedSupplier, onSav
                         />
                     </div>
 
-                    <div className="flex justify-end gap-3 mt-6 pt-3 border-t border-[var(--border)]">
+                    <div className="sticky bottom-0 -mx-4 mt-6 flex flex-col gap-3 border-t border-[var(--border)] bg-[var(--card-bg)] px-4 pt-4 sm:static sm:mx-0 sm:flex-row sm:justify-end sm:bg-transparent sm:px-0">
                         <button
                             type="button"
                             onClick={onClose}
@@ -136,7 +136,7 @@ export default function SupplierModal({ isOpen, onClose, selectedSupplier, onSav
                             type="submit"
                             disabled={loading || !form.name.trim() || !form.email.trim()}
                             className="
-                                flex items-center gap-2
+                                flex items-center justify-center gap-2
                                 px-5 py-2.5 text-sm font-medium rounded-lg
                                 bg-[var(--accent)] text-[var(--accent-text)]
                                 hover:opacity-90 transition disabled:opacity-50

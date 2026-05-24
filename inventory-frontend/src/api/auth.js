@@ -14,18 +14,58 @@ const getUserPayload = (data = {}) => (
     null
 );
 
-const normalizeAuthUser = (user = {}) => ({
-    ...user,
-    id: user.id ?? user.userId ?? user.userID,
-    userId: user.userId ?? user.id ?? user.userID,
-    userID: user.userID ?? user.userId ?? user.id,
-    username: user.username ?? user.name ?? "",
-    name: user.name ?? user.username ?? "",
-    email: user.email ?? "",
-    role: user.role,
-});
+const isEmailLike = (value = "") => String(value).includes("@");
+const ROLE_VALUES = new Set([
+    "ADMIN",
+    "MANAGER",
+    "CASHIER",
+    "INVENTORY_CLERK",
+    "STANDARD_USER",
+    "MEMBER",
+    "ROLE_ADMIN",
+    "ROLE_MANAGER",
+    "ROLE_CASHIER",
+    "ROLE_INVENTORY_CLERK",
+    "ROLE_STANDARD_USER",
+    "ROLE_MEMBER",
+]);
+const isRoleLike = (value = "") => ROLE_VALUES.has(String(value).trim().toUpperCase());
+const firstNonEmail = (...values) => (
+    values
+        .map((value) => String(value || "").trim())
+        .find((value) => value && !isEmailLike(value) && !isRoleLike(value)) || ""
+);
+const getUsernameValue = (user = {}) => firstNonEmail(
+    user.username,
+    user.userName,
+    user.name,
+    user.displayName,
+    user.fullName,
+    user.login
+);
 
-const decodeJwtPayload = (token) => {
+const normalizeRole = (role) => {
+    const value = Array.isArray(role) ? role[0] : role;
+    return String(value || "").replace("ROLE_", "").toUpperCase();
+};
+
+export const normalizeAuthUser = (user = {}) => {
+    const id = user.id ?? user.userId ?? user.userID;
+    const username = getUsernameValue(user);
+
+    return {
+        ...user,
+        id,
+        userId: id,
+        userID: id,
+        username,
+        name: username,
+        email: user.email ?? "",
+        role: normalizeRole(user.role),
+    };
+};
+
+export const decodeJwtPayload = (token) => {
     try {
         const [, payload] = token.split(".");
         const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
@@ -42,21 +82,27 @@ const decodeJwtPayload = (token) => {
     }
 };
 
-const getUserFromToken = (accessToken) => {
+export const getUserFromToken = (accessToken) => {
     const payload = decodeJwtPayload(accessToken);
     if (!payload) return null;
 
     const role = payload.role || payload.authority || payload.roles?.[0] || payload.scope;
-    const username = payload.username || payload.sub || payload.name || payload.email;
+    const username = firstNonEmail(payload.username, payload.userName, payload.name);
+    const email = payload.email || (isEmailLike(payload.sub) ? payload.sub : "");
 
-    return {
+    return normalizeAuthUser({
         id: payload.userID || payload.userId || payload.id,
-        userID: payload.userID || payload.userId || payload.id,
         username,
-        name: payload.name || username,
-        email: payload.email || (username?.includes("@") ? username : ""),
-        role: Array.isArray(role) ? role[0] : role,
-    };
+        name: username,
+        email,
+        role,
+    });
+};
+
+export const isTokenExpired = (token, skewMs = 30_000) => {
+    const payload = decodeJwtPayload(token);
+    if (!payload?.exp) return false;
+    return (payload.exp * 1000) <= Date.now() + skewMs;
 };
 
 
@@ -91,7 +137,7 @@ export const login = async (loginId, password) => {
         ...data,
         accessToken,
         refreshToken,
-        user: getUserPayload(data) || getUserFromToken(accessToken),
+        user: normalizeAuthUser(getUserPayload(data) || getUserFromToken(accessToken)),
     };
 };
 
@@ -114,15 +160,39 @@ export const refreshToken = (refreshToken) => {
  *
  * @returns {Promise} user profile (email, username, role)
  */
-export const getCurrentUser = async () => {
+export const getCurrentUser = async ({ signal, force = false } = {}) => {
     return cachedRequest("auth:me", async () => {
-        const res = await api.get("/api/auth/me");
-        return normalizeAuthUser(res.data?.data || res.data);
-    }, { ttl: 120_000, staleTtl: 5 * 60_000, fallbackOnError: false });
+        const res = await api.get("/api/auth/me", {
+            signal,
+            timeout: 4_000,
+        });
+        const currentUser = normalizeAuthUser(res.data?.data || res.data);
+
+        if (currentUser.username) {
+            return currentUser;
+        }
+
+        if (currentUser.id) {
+            try {
+                const detailRes = await api.get(`/api/users/${currentUser.id}`, {
+                    signal,
+                    timeout: 4_000,
+                });
+                return normalizeAuthUser({
+                    ...currentUser,
+                    ...(detailRes.data?.data || detailRes.data),
+                });
+            } catch {
+                return currentUser;
+            }
+        }
+
+        return currentUser;
+    }, { ttl: 5 * 60_000, staleTtl: 15 * 60_000, fallbackOnError: false, force });
 };
 
 export const updateCurrentUser = async (payload) => {
-    const res = await api.put("/api/auth/me", payload);
+    const res = await api.put("/api/auth/me", payload, { timeout: 6_000 });
     invalidateCache("auth:");
     return normalizeAuthUser(res.data?.data || res.data);
 };

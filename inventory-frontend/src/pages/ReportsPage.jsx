@@ -30,6 +30,8 @@ const reports = [
     { id: "supplier-performance", label: "Supplier Performance", icon: Truck },
 ];
 
+const REPORT_TABLE_PAGE_SIZE = 10;
+
 const money = (value) => `PHP ${Number(value || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const number = (value) => Number(value || 0).toLocaleString("en-PH");
 
@@ -233,8 +235,8 @@ function ReportChart({ reportId, data, loading }) {
 
     return (
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.35fr_0.65fr]">
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
-                <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-3 sm:p-4">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <div className="text-sm font-semibold text-[var(--text-h)]">
                             {isRankedChart ? "Ranked Performance" : "Trend Overview"}
@@ -244,7 +246,7 @@ function ReportChart({ reportId, data, loading }) {
                         </p>
                     </div>
                     {topRow && (
-                        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-right">
+                        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-left sm:text-right">
                             <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Peak</div>
                             <div className="text-sm font-semibold text-[var(--text-h)]">{compactValue(topRow.value, reportId)}</div>
                         </div>
@@ -257,7 +259,7 @@ function ReportChart({ reportId, data, loading }) {
                             const width = Math.max(3, (row.value / maxValue) * 100);
                             const tone = toneClasses[row.tone] || toneClasses.emerald;
                             return (
-                                <div key={`${row.label}-${index}`} className="grid grid-cols-[minmax(100px,180px)_1fr] items-center gap-3">
+                                <div key={`${row.label}-${index}`} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(100px,180px)_1fr] sm:items-center sm:gap-3">
                                     <div className="min-w-0">
                                         <div className="truncate text-xs font-semibold text-[var(--text-h)]">{row.label}</div>
                                         <div className="text-[10px] text-[var(--muted)]">
@@ -266,11 +268,11 @@ function ReportChart({ reportId, data, loading }) {
                                                 : `${number(row.secondaryValue)} item${row.secondaryValue === 1 ? "" : "s"}`}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-8 flex-1 rounded-lg bg-[var(--input-bg)]">
+                                    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                                        <div className="h-8 min-w-0 flex-1 rounded-lg bg-[var(--input-bg)]">
                                             <div className={`h-8 rounded-lg bg-gradient-to-r ${tone}`} style={{ width: `${width}%` }} />
                                         </div>
-                                        <div className="w-24 text-right text-xs font-semibold text-[var(--text-h)]">
+                                        <div className="w-20 shrink-0 text-right text-[11px] font-semibold text-[var(--text-h)] sm:w-24 sm:text-xs">
                                             {compactValue(row.value, reportId)}
                                         </div>
                                     </div>
@@ -279,13 +281,14 @@ function ReportChart({ reportId, data, loading }) {
                         })}
                     </div>
                 ) : (
-                    <div className="flex h-72 items-end gap-3">
+                    <div className="overflow-x-auto pb-2">
+                    <div className="flex h-64 min-w-[520px] items-end gap-2 sm:h-72 sm:min-w-0 sm:gap-3">
                         {rows.map((row, index) => {
                             const height = Math.max(4, (row.value / maxValue) * 100);
                             const secondaryHeight = Math.max(0, (row.secondaryValue / maxValue) * 100);
                             const tone = toneClasses[row.tone] || toneClasses.emerald;
                             return (
-                                <div key={`${row.label}-${index}`} className="flex h-full flex-1 flex-col justify-end gap-2">
+                                <div key={`${row.label}-${index}`} className="flex h-full min-w-10 flex-1 flex-col justify-end gap-2">
                                     <div className="flex min-h-0 flex-1 items-end justify-center gap-1 rounded-lg bg-[var(--input-bg)] px-1 pt-2">
                                         <div className={`w-full rounded-t-md bg-gradient-to-t ${tone}`} style={{ height: `${height}%` }} title={compactValue(row.value, reportId)} />
                                         {row.secondaryValue > 0 && (
@@ -299,21 +302,22 @@ function ReportChart({ reportId, data, loading }) {
                             );
                         })}
                     </div>
+                    </div>
                 )}
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
+                <div className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Plotted Total</div>
-                    <div className="mt-2 text-xl font-semibold text-[var(--text-h)]">{compactValue(total, reportId)}</div>
+                    <div className="mt-2 truncate text-lg font-semibold text-[var(--text-h)] sm:text-xl">{compactValue(total, reportId)}</div>
                 </div>
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
+                <div className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Top Performer</div>
-                    <div className="mt-2 truncate text-xl font-semibold text-[var(--text-h)]">{topRow?.label || "N/A"}</div>
+                    <div className="mt-2 truncate text-lg font-semibold text-[var(--text-h)] sm:text-xl">{topRow?.label || "N/A"}</div>
                 </div>
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
+                <div className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Average</div>
-                    <div className="mt-2 text-xl font-semibold text-[var(--text-h)]">{compactValue(total / rows.length, reportId)}</div>
+                    <div className="mt-2 truncate text-lg font-semibold text-[var(--text-h)] sm:text-xl">{compactValue(total / rows.length, reportId)}</div>
                 </div>
             </div>
         </div>
@@ -331,6 +335,7 @@ export default function ReportsPage() {
         supplierId: "",
     });
     const [tableQuery, setTableQuery] = useState(cachedReportState.tableQuery || "");
+    const [tablePage, setTablePage] = useState(cachedReportState.tablePage || 1);
     const [reportData, setReportData] = useState({});
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
@@ -351,6 +356,12 @@ export default function ReportsPage() {
         if (!query) return table.rows;
         return table.rows.filter((row) => row.some((cell) => String(cell || "").toLowerCase().includes(query)));
     }, [debouncedTableQuery, table.rows]);
+    const tableTotalPages = Math.max(1, Math.ceil(filteredTableRows.length / REPORT_TABLE_PAGE_SIZE));
+    const currentTablePage = Math.min(tablePage, tableTotalPages);
+    const paginatedTableRows = useMemo(() => {
+        const start = (currentTablePage - 1) * REPORT_TABLE_PAGE_SIZE;
+        return filteredTableRows.slice(start, start + REPORT_TABLE_PAGE_SIZE);
+    }, [currentTablePage, filteredTableRows]);
 
     const loadReport = useCallback(async () => {
         try {
@@ -366,8 +377,12 @@ export default function ReportsPage() {
     }, [activeReport, filters]);
 
     useEffect(() => {
-        setPageCache("reports:state", { activeReport, filters, tableQuery });
-    }, [activeReport, filters, tableQuery]);
+        setPageCache("reports:state", { activeReport, filters, tableQuery, tablePage });
+    }, [activeReport, filters, tablePage, tableQuery]);
+
+    useEffect(() => {
+        setTablePage(1);
+    }, [activeReport, debouncedTableQuery, filters]);
 
     useEffect(() => {
         Promise.all([
@@ -407,7 +422,7 @@ export default function ReportsPage() {
                     </p>
                 </div>
 
-                <button onClick={loadReport} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-h)] transition hover:bg-[var(--input-bg)]">
+                <button onClick={loadReport} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-h)] transition hover:bg-[var(--input-bg)] sm:w-auto">
                     <RefreshCw size={16} />
                     Refresh
                 </button>
@@ -431,7 +446,7 @@ export default function ReportsPage() {
                                     <Icon size={18} />
                                 </span>
                             </div>
-                            <div className="mt-4 text-2xl font-semibold text-[var(--text-h)]">{item.value}</div>
+                            <div className="mt-4 break-words text-xl font-semibold text-[var(--text-h)] sm:text-2xl">{item.value}</div>
                             <p className="mt-1 text-xs text-[var(--muted)]">{item.detail}</p>
                         </div>
                     );
@@ -444,7 +459,7 @@ export default function ReportsPage() {
                     Report Filters
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
                     <label className="space-y-1.5">
                         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Start date</span>
                         <input type="date" value={filters.startDate} onChange={(e) => updateFilter("startDate", e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" />
@@ -477,7 +492,7 @@ export default function ReportsPage() {
                 </div>
             </div>
 
-            <div className="mb-5 overflow-x-auto">
+            <div className="mb-5 overflow-x-auto pb-1">
                 <div className="flex min-w-max gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-2 shadow-[var(--shadow)]">
                     {reports.map((report) => {
                         const Icon = report.icon;
@@ -486,7 +501,7 @@ export default function ReportsPage() {
                             <button
                                 key={report.id}
                                 onClick={() => setActiveReport(report.id)}
-                                className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${active ? "bg-[var(--accent)] text-[var(--accent-text)]" : "text-[var(--muted)] hover:bg-[var(--input-bg)] hover:text-[var(--text-h)]"}`}
+                                className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${active ? "bg-[var(--accent)] text-[var(--accent-text)]" : "text-[var(--muted)] hover:bg-[var(--input-bg)] hover:text-[var(--text-h)]"}`}
                             >
                                 <Icon size={16} />
                                 {report.label}
@@ -496,7 +511,7 @@ export default function ReportsPage() {
                 </div>
             </div>
 
-            <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-[var(--shadow)]">
+            <div className="mb-5 min-w-0 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3 shadow-[var(--shadow)] sm:p-5">
                 <div className="mb-5 flex items-start justify-between gap-4">
                     <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--text-h)]">
                         <ActiveReportIcon size={18} className="text-[var(--accent)]" />
@@ -549,7 +564,7 @@ export default function ReportsPage() {
                                     {table.columns.map((column) => <td key={column} className="px-4 py-4"><div className="h-4 rounded bg-[var(--input-bg)]" /></td>)}
                                 </tr>
                             ))}
-                            {!loading && filteredTableRows.map((row) => (
+                            {!loading && paginatedTableRows.map((row) => (
                                 <tr key={row.join("-")} className="transition hover:bg-[var(--input-bg)]/55">
                                     {row.map((cell, index) => (
                                         <td key={`${cell}-${index}`} className="px-4 py-3 text-[var(--text)] first:font-semibold first:text-[var(--text-h)]">
@@ -563,6 +578,34 @@ export default function ReportsPage() {
                 </div>
                 {!loading && filteredTableRows.length === 0 && (
                     <div className="px-6 py-12 text-center text-sm text-[var(--muted)]">No report rows found for the selected filters.</div>
+                )}
+                {!loading && filteredTableRows.length > 0 && (
+                    <div className="flex flex-col gap-3 border-t border-[var(--border)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-[var(--muted)]">
+                            Showing {((currentTablePage - 1) * REPORT_TABLE_PAGE_SIZE) + 1} - {Math.min(currentTablePage * REPORT_TABLE_PAGE_SIZE, filteredTableRows.length)} of {filteredTableRows.length} rows
+                        </p>
+                        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+                            <button
+                                type="button"
+                                disabled={currentTablePage === 1}
+                                onClick={() => setTablePage((page) => Math.max(1, page - 1))}
+                                className="rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1.5 text-sm transition hover:bg-[var(--border)] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Previous
+                            </button>
+                            <span className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--accent-text)]">
+                                {currentTablePage} / {tableTotalPages}
+                            </span>
+                            <button
+                                type="button"
+                                disabled={currentTablePage === tableTotalPages}
+                                onClick={() => setTablePage((page) => Math.min(tableTotalPages, page + 1))}
+                                className="rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1.5 text-sm transition hover:bg-[var(--border)] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
                 )}
             </div>
         </DashboardLayout>

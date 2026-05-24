@@ -73,8 +73,8 @@ export default function ProductModal({ open, onClose, onSave, product, loading }
     const isValid = form.name.trim() && form.price && Number(form.price) > 0;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="w-full max-w-lg p-5 sm:p-6 rounded-xl bg-[var(--card-bg)] border border-[var(--border)] max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 p-0 sm:items-center sm:p-4">
+            <div className="w-full max-w-lg p-4 sm:p-6 rounded-t-2xl sm:rounded-xl bg-[var(--card-bg)] border border-[var(--border)] max-h-[92dvh] overflow-y-auto">
                 {/* HEADER */}
                 <div className="flex items-center justify-between mb-5">
                     <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ export default function ProductModal({ open, onClose, onSave, product, loading }
                 </div>
 
                 {/* ACTIONS */}
-                <div className="flex justify-end gap-2 sm:gap-3 mt-6">
+                <div className="sticky bottom-0 -mx-4 mt-6 flex flex-col gap-2 border-t border-[var(--border)] bg-[var(--card-bg)] px-4 pt-4 sm:static sm:mx-0 sm:flex-row sm:justify-end sm:gap-3 sm:border-t-0 sm:bg-transparent sm:px-0 sm:pt-0">
                     <button 
                         onClick={onClose}
                         disabled={loading}
@@ -196,7 +196,7 @@ export default function ProductModal({ open, onClose, onSave, product, loading }
                     <button
                         onClick={handleSave}
                         disabled={loading || !isValid}
-                        className="px-5 py-2.5 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
+                        className="px-5 py-2.5 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {loading && <Loader2 size={16} className="animate-spin" />}
                         {product ? "Save Changes" : "Add Product"}

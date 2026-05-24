@@ -51,7 +51,7 @@ export default function Sidebar({ isOpen, onClose }) {
         {
             title: "SYSTEM",
             items: [
-                { label: "Users", icon: <UserCog size={18} />, path: "/users", roles: ["ADMIN", "MANAGER"] },
+                { label: "Members", icon: <UserCog size={18} />, path: "/members", roles: ["ADMIN", "MANAGER"] },
                 { label: "Settings", icon: <Settings size={18} />, path: "/settings" }
             ]
         }
@@ -85,18 +85,18 @@ export default function Sidebar({ isOpen, onClose }) {
             {/* SIDEBAR */}
             <aside className={`
                 fixed top-0 left-0 z-50
-                w-72 h-screen
+                w-[min(20rem,88vw)] h-dvh lg:w-72
                 lg:top-4 lg:left-4 lg:h-[calc(100vh-2rem)]
                 bg-[var(--sidebar-bg)]
                 lg:rounded-[28px] border-r lg:border border-[var(--sidebar-border)]
                 shadow-[var(--shadow)]
                 flex flex-col
-                transition-all duration-300 ease-in-out
+                transition-transform duration-300 ease-out will-change-transform
                 ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
             `}>
 
                 {/* BRAND */}
-                <div className="flex items-center justify-between px-5 py-5">
+                <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5">
                     <div className="flex items-center gap-3">
                         <img
                             src={MainLogo}
@@ -119,7 +119,8 @@ export default function Sidebar({ isOpen, onClose }) {
                         {/* CLOSE BUTTON FOR MOBILE */}
                         <button 
                             onClick={onClose}
-                            className="p-1 rounded-lg hover:bg-[var(--input-bg)] text-[var(--muted)] lg:hidden transition"
+                            className="min-h-11 min-w-11 rounded-lg hover:bg-[var(--input-bg)] text-[var(--muted)] lg:hidden transition inline-flex items-center justify-center"
+                            aria-label="Close navigation"
                         >
                             <X size={20} />
                         </button>
@@ -127,7 +128,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 </div>
 
                 {/* NAV */}
-                <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
+                <nav className="scrollbar-hidden flex-1 overscroll-contain scroll-smooth px-3 py-3 sm:py-4 space-y-5 overflow-y-auto">
                     {parsedSections.map((section, idx) => (
                         <div key={idx} className="space-y-1.5">
                             {section.title && (
@@ -160,7 +161,7 @@ export default function Sidebar({ isOpen, onClose }) {
                         onClick={handleLogout}
                         className="
                             w-full flex items-center gap-3
-                            px-3 py-2 rounded-lg
+                            min-h-11 px-3 py-2 rounded-lg
                             text-red-400
                             hover:bg-red-500/10
                             transition

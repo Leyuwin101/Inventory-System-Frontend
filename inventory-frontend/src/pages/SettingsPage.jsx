@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useAuth } from "../components/context/AuthContext";
 import { useTheme } from "../components/context/ThemeContext";
@@ -22,12 +22,19 @@ const tabs = [
     { id: "theme", label: "Theme", icon: Moon },
 ];
 
+const getMemberName = (user = {}) => {
+    const name = user?.username || user?.name || "";
+    const normalized = String(name || "").replace("ROLE_", "").toUpperCase();
+    const isRole = ["ADMIN", "MANAGER", "CASHIER", "INVENTORY_CLERK", "STANDARD_USER", "MEMBER"].includes(normalized);
+    return String(name).includes("@") || isRole ? "" : name;
+};
+
 export default function SettingsPage() {
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, authLoading } = useAuth();
     const { theme, setTheme } = useTheme();
     const [activeTab, setActiveTab] = useState("profile");
     const [profileForm, setProfileForm] = useState({
-        username: user?.username || user?.name || "",
+        username: getMemberName(user),
         email: user?.email || "",
     });
     const [passwordForm, setPasswordForm] = useState({
@@ -39,6 +46,14 @@ export default function SettingsPage() {
     const [savingProfile, setSavingProfile] = useState(false);
     const [savingPassword, setSavingPassword] = useState(false);
     const [notice, setNotice] = useState({ type: "", message: "" });
+    const memberName = getMemberName(user);
+
+    useEffect(() => {
+        setProfileForm({
+            username: getMemberName(user),
+            email: user?.email || "",
+        });
+    }, [user]);
 
     const showNotice = (type, message) => {
         setNotice({ type, message });
@@ -57,7 +72,7 @@ export default function SettingsPage() {
         event.preventDefault();
 
         if (!profileForm.username.trim()) {
-            showNotice("error", "Username is required.");
+            showNotice("error", "Member name is required.");
             return;
         }
 
@@ -71,11 +86,12 @@ export default function SettingsPage() {
             const updated = await updateCurrentUser({
                 username: profileForm.username.trim(),
             });
+            const memberName = updated.username || profileForm.username.trim();
             updateUser({
                 ...user,
                 ...updated,
-                username: updated.username || profileForm.username.trim(),
-                name: updated.name || updated.username || profileForm.username.trim(),
+                username: memberName,
+                name: memberName,
                 email: updated.email || profileForm.email.trim(),
             });
             showNotice("success", "Profile changes saved to the database.");
@@ -150,7 +166,7 @@ export default function SettingsPage() {
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`flex min-w-max items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition lg:min-w-0 ${
+                                    className={`flex min-h-11 min-w-max items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition lg:min-w-0 ${
                                         active
                                             ? "bg-[var(--accent)] text-[var(--accent-text)]"
                                             : "text-[var(--muted)] hover:bg-[var(--input-bg)] hover:text-[var(--text-h)]"
@@ -166,18 +182,24 @@ export default function SettingsPage() {
 
                 <section className="space-y-5 lg:col-span-3">
                     {activeTab === "profile" && (
-                        <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-[var(--shadow)]">
+                        <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 shadow-[var(--shadow)] sm:p-5">
                             <div className="mb-5">
                                 <h2 className="text-lg font-semibold text-[var(--text-h)]">Profile Information</h2>
-                                <p className="mt-1 text-xs text-[var(--muted)]">Username updates are saved to your account record.</p>
+                                <p className="mt-1 text-xs text-[var(--muted)]">Member name updates are saved to your account record.</p>
                             </div>
 
+                            {authLoading || (user && !memberName) ? (
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div className="h-20 animate-pulse rounded-lg bg-[var(--input-bg)]" />
+                                    <div className="h-20 animate-pulse rounded-lg bg-[var(--input-bg)]" />
+                                </div>
+                            ) : (
                             <form onSubmit={handleProfileSave} className="space-y-4">
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <label className="space-y-1.5">
                                         <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                                             <User size={13} />
-                                            Username
+                                            Member name
                                         </span>
                                         <input value={profileForm.username} onChange={(e) => updateProfileField("username", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]" />
                                     </label>
@@ -196,17 +218,18 @@ export default function SettingsPage() {
                                 </div>
 
                                 <div className="flex justify-end">
-                                    <button disabled={savingProfile} className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] transition hover:opacity-95 disabled:opacity-60">
+                                    <button disabled={savingProfile} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] transition hover:opacity-95 disabled:opacity-60 sm:w-auto">
                                         {savingProfile && <Loader2 size={16} className="animate-spin" />}
                                         Save profile
                                     </button>
                                 </div>
                             </form>
+                            )}
                         </div>
                     )}
 
                     {activeTab === "security" && (
-                        <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-[var(--shadow)]">
+                        <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 shadow-[var(--shadow)] sm:p-5">
                             <div className="mb-5 flex items-start justify-between gap-4">
                                 <div>
                                     <h2 className="text-lg font-semibold text-[var(--text-h)]">Change Password</h2>
@@ -235,7 +258,7 @@ export default function SettingsPage() {
                                 </div>
 
                                 <div className="flex justify-end">
-                                    <button disabled={savingPassword} className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] transition hover:opacity-95 disabled:opacity-60">
+                                    <button disabled={savingPassword} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] transition hover:opacity-95 disabled:opacity-60 sm:w-auto">
                                         {savingPassword && <Loader2 size={16} className="animate-spin" />}
                                         Validate password change
                                     </button>
@@ -245,7 +268,7 @@ export default function SettingsPage() {
                     )}
 
                     {activeTab === "theme" && (
-                        <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-[var(--shadow)]">
+                        <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 shadow-[var(--shadow)] sm:p-5">
                             <div className="mb-5">
                                 <h2 className="text-lg font-semibold text-[var(--text-h)]">Theme Settings</h2>
                                 <p className="mt-1 text-xs text-[var(--muted)]">Choose the green inventory workspace theme that fits your environment.</p>

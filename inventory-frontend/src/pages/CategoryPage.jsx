@@ -18,6 +18,8 @@ import CategoryCard from "../components/categories/CategoryCard";
 import CategoryModal from "../components/categories/CategoryModal";
 import { clearPageCache, getPageCache, setPageCache } from "../store/pageCache";
 
+const CATEGORIES_PAGE_SIZE = 9;
+
 export default function CategoryPage() {
     const { user } = useAuth();
     const cachedCategories = getPageCache("categories");
@@ -25,6 +27,7 @@ export default function CategoryPage() {
     const [loading, setLoading] = useState(!cachedCategories);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
 
     // Modal States
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -128,6 +131,12 @@ export default function CategoryPage() {
         cat.name?.toLowerCase().includes(search.toLowerCase()) ||
         cat.description?.toLowerCase().includes(search.toLowerCase())
     );
+    const totalPages = Math.max(1, Math.ceil(filteredCategories.length / CATEGORIES_PAGE_SIZE));
+    const currentPage = Math.min(page, totalPages);
+    const visibleCategories = filteredCategories.slice(
+        (currentPage - 1) * CATEGORIES_PAGE_SIZE,
+        currentPage * CATEGORIES_PAGE_SIZE
+    );
 
     return (
         <DashboardLayout>
@@ -150,7 +159,7 @@ export default function CategoryPage() {
                     <button
                         onClick={() => handleOpenModal()}
                         className="
-                            flex items-center gap-2
+                            flex w-full items-center justify-center gap-2 sm:w-auto
                             px-4 py-2.5 rounded-lg
                             bg-[var(--accent)] text-[var(--accent-text)]
                             font-medium hover:opacity-90 transition
@@ -171,7 +180,10 @@ export default function CategoryPage() {
                         type="text"
                         placeholder="Search categories..."
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setPage(1);
+                        }}
                         className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-h)] text-sm focus:outline-none"
                     />
                 </div>
@@ -209,19 +221,37 @@ export default function CategoryPage() {
                 </div>
             ) : (
                 /* CATEGORIES GRID */
-                <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${loading ? "opacity-60 pointer-events-none" : ""} transition-opacity duration-200`}>
-                    {filteredCategories.map((cat, index) => (
-                        <CategoryCard
-                            key={cat.id || cat.categoryId || cat.category_id || index}
-                            category={cat}
-                            index={index}
-                            canEdit={canCreateOrUpdate}
-                            canDelete={canDelete}
-                            onEdit={handleOpenModal}
-                            onDelete={handleDelete}
-                        />
-                    ))}
-                </div>
+                <>
+                    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${loading ? "opacity-60 pointer-events-none" : ""} transition-opacity duration-200`}>
+                        {visibleCategories.map((cat, index) => (
+                            <CategoryCard
+                                key={cat.id || cat.categoryId || cat.category_id || index}
+                                category={cat}
+                                index={(currentPage - 1) * CATEGORIES_PAGE_SIZE + index}
+                                canEdit={canCreateOrUpdate}
+                                canDelete={canDelete}
+                                onEdit={handleOpenModal}
+                                onDelete={handleDelete}
+                            />
+                        ))}
+                    </div>
+                    <div className="mt-4 flex flex-col items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:flex-row">
+                        <p className="text-sm text-[var(--muted)]">
+                            Showing {((currentPage - 1) * CATEGORIES_PAGE_SIZE) + 1} - {Math.min(currentPage * CATEGORIES_PAGE_SIZE, filteredCategories.length)} of {filteredCategories.length} categories
+                        </p>
+                        <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+                            <button disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1.5 text-sm transition hover:bg-[var(--border)] disabled:cursor-not-allowed disabled:opacity-50">
+                                Previous
+                            </button>
+                            <span className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--accent-text)]">
+                                {currentPage} / {totalPages}
+                            </span>
+                            <button disabled={currentPage === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))} className="rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1.5 text-sm transition hover:bg-[var(--border)] disabled:cursor-not-allowed disabled:opacity-50">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </>
             )}
 
             {/* CREATE/EDIT MODAL */}

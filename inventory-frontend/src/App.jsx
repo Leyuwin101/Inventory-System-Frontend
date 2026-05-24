@@ -119,13 +119,14 @@ export default function App() {
                 />
 
                 <Route
-                    path="/users"
+                    path="/members"
                     element={
                         <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
                             <UsersPage />
                         </ProtectedRoute>
                     }
                 />
+                <Route path="/users" element={<Navigate to="/members" replace />} />
 
                 </Routes>
             </Suspense>

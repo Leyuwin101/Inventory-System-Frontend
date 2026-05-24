@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { login } from "../../api/auth.js";
 import { useAuth } from "../context/AuthContext";
 import AuthInput from "./AuthInput";
@@ -8,12 +8,18 @@ import { useNavigate } from "react-router-dom";
 
 export default function AuthForm() {
     const navigate = useNavigate();
-    const { completeLogin } = useAuth();
+    const { completeLogin, user, authHydrated } = useAuth();
 
     const [loginId, setLoginId] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        if (authHydrated && user) {
+            navigate("/main", { replace: true });
+        }
+    }, [authHydrated, navigate, user]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -52,13 +58,13 @@ export default function AuthForm() {
             transition={{ duration: 0.5 }}
             className="
                 w-full max-w-md sm:max-w-lg
-                min-h-auto sm:min-h-[68vh]
+                min-h-auto md:min-h-[68vh]
 
                 bg-[var(--card-bg)]
                 border border-[var(--border)]
-                rounded-2xl
+                rounded-xl sm:rounded-2xl
 
-                p-6 sm:p-8 lg:p-10
+                p-4 sm:p-8 lg:p-10
 
                 shadow-[0_24px_70px_-28px_rgba(16,185,129,0.45),var(--shadow)]
 
@@ -80,7 +86,7 @@ export default function AuthForm() {
                 </div>
 
                 <AuthInput
-                    label="Username or Email"
+                    label="Member name or Email"
                     type="text"
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}

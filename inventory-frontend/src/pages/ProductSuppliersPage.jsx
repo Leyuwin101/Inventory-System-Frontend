@@ -13,6 +13,9 @@ const getSupplierId = (supplier) => getId(supplier, ["id", "supplierId", "suppli
 const formatMoney = (value) =>
     `PHP ${Number(value || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
 
+const PRODUCT_LIST_PAGE_SIZE = 8;
+const ASSIGNED_SUPPLIERS_PAGE_SIZE = 8;
+
 export default function ProductSuppliersPage() {
     const [products, setProducts] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
@@ -24,6 +27,8 @@ export default function ProductSuppliersPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
+    const [productPage, setProductPage] = useState(1);
+    const [assignedPage, setAssignedPage] = useState(1);
 
     const loadData = useCallback(async () => {
         try {
@@ -84,6 +89,22 @@ export default function ProductSuppliersPage() {
             product.categoryName,
         ].some((field) => String(field || "").toLowerCase().includes(value)));
     }, [products, query]);
+    const productTotalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCT_LIST_PAGE_SIZE));
+    const currentProductPage = Math.min(productPage, productTotalPages);
+    const visibleProducts = useMemo(() => {
+        const start = (currentProductPage - 1) * PRODUCT_LIST_PAGE_SIZE;
+        return filteredProducts.slice(start, start + PRODUCT_LIST_PAGE_SIZE);
+    }, [currentProductPage, filteredProducts]);
+    const assignedTotalPages = Math.max(1, Math.ceil(assignedSuppliers.length / ASSIGNED_SUPPLIERS_PAGE_SIZE));
+    const currentAssignedPage = Math.min(assignedPage, assignedTotalPages);
+    const visibleAssignedSuppliers = useMemo(() => {
+        const start = (currentAssignedPage - 1) * ASSIGNED_SUPPLIERS_PAGE_SIZE;
+        return assignedSuppliers.slice(start, start + ASSIGNED_SUPPLIERS_PAGE_SIZE);
+    }, [assignedSuppliers, currentAssignedPage]);
+
+    useEffect(() => {
+        setAssignedPage(1);
+    }, [selectedProductId]);
 
     const handleAssign = async (event) => {
         event.preventDefault();
@@ -163,14 +184,17 @@ export default function ProductSuppliersPage() {
                             <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
                             <input
                                 value={query}
-                                onChange={(event) => setQuery(event.target.value)}
+                                onChange={(event) => {
+                                    setQuery(event.target.value);
+                                    setProductPage(1);
+                                }}
                                 placeholder="Search products..."
                                 className="w-full rounded-lg py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[var(--accent)]"
                             />
                         </div>
 
-                        <div className="max-h-[62vh] space-y-2 overflow-y-auto pr-1">
-                            {filteredProducts.map((product) => {
+                        <div className="scrollbar-hidden max-h-[62vh] space-y-2 overflow-y-auto pr-1">
+                            {visibleProducts.map((product) => {
                                 const productId = getProductId(product);
                                 const active = String(productId) === String(selectedProductId);
 
@@ -198,6 +222,27 @@ export default function ProductSuppliersPage() {
                                 );
                             })}
                         </div>
+                        {filteredProducts.length > 0 && (
+                            <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-3">
+                                <button
+                                    type="button"
+                                    disabled={currentProductPage === 1}
+                                    onClick={() => setProductPage((page) => Math.max(1, page - 1))}
+                                    className="rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Previous
+                                </button>
+                                <span className="text-xs text-[var(--muted)]">{currentProductPage} / {productTotalPages}</span>
+                                <button
+                                    type="button"
+                                    disabled={currentProductPage === productTotalPages}
+                                    onClick={() => setProductPage((page) => Math.min(productTotalPages, page + 1))}
+                                    className="rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        )}
                     </aside>
 
                     <section className="space-y-5">
@@ -268,9 +313,9 @@ export default function ProductSuppliersPage() {
                             </form>
                         </div>
 
-                        <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-[var(--shadow)]">
+                        <div className="scrollbar-hidden overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-[var(--shadow)]">
                             <table className="w-full min-w-[680px] text-left text-sm">
-                                <thead className="border-b border-[var(--border)] bg-[var(--input-bg)] text-xs uppercase text-[var(--muted)]">
+                                <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--input-bg)] text-xs uppercase text-[var(--muted)]">
                                     <tr>
                                         <th className="p-4 font-medium">Supplier</th>
                                         <th className="p-4 font-medium">Company</th>
@@ -287,7 +332,7 @@ export default function ProductSuppliersPage() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        assignedSuppliers.map((supplier) => {
+                                        visibleAssignedSuppliers.map((supplier) => {
                                             const supplierId = getSupplierId(supplier);
 
                                             return (
@@ -325,6 +370,34 @@ export default function ProductSuppliersPage() {
                                 </tbody>
                             </table>
                         </div>
+                        {assignedSuppliers.length > 0 && (
+                            <div className="flex flex-col items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:flex-row">
+                                <p className="text-sm text-[var(--muted)]">
+                                    Showing {((currentAssignedPage - 1) * ASSIGNED_SUPPLIERS_PAGE_SIZE) + 1} - {Math.min(currentAssignedPage * ASSIGNED_SUPPLIERS_PAGE_SIZE, assignedSuppliers.length)} of {assignedSuppliers.length} assigned suppliers
+                                </p>
+                                <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
+                                    <button
+                                        type="button"
+                                        disabled={currentAssignedPage === 1}
+                                        onClick={() => setAssignedPage((page) => Math.max(1, page - 1))}
+                                        className="rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1.5 text-sm transition hover:bg-[var(--border)] disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Previous
+                                    </button>
+                                    <span className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-[var(--accent-text)]">
+                                        {currentAssignedPage} / {assignedTotalPages}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        disabled={currentAssignedPage === assignedTotalPages}
+                                        onClick={() => setAssignedPage((page) => Math.min(assignedTotalPages, page + 1))}
+                                        className="rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1.5 text-sm transition hover:bg-[var(--border)] disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </section>
                 </div>
             )}

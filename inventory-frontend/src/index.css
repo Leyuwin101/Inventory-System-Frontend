@@ -91,6 +91,7 @@ body {
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #root {
@@ -104,6 +105,14 @@ h1, h2, h3, h4, p, span, label, input {
   color: inherit;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+}
+
 a, li {
   color: inherit;
 }
@@ -111,10 +120,12 @@ a, li {
 input,
 textarea,
 select {
+  min-height: 44px;
   color: var(--text-h);
   background: var(--input-bg);
   border: 1px solid var(--border);
   font-weight: 500;
+  font-size: 16px;
 }
 
 input::placeholder,
@@ -149,13 +160,35 @@ button {
   touch-action: manipulation;
 }
 
+button,
+a,
+[role="button"] {
+  min-height: 44px;
+}
+
 table {
   border-collapse: collapse;
+}
+
+th,
+td {
+  overflow-wrap: anywhere;
 }
 
 img {
   max-width: 100%;
   height: auto;
+}
+
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .content-auto {

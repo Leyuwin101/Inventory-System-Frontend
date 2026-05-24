@@ -279,7 +279,7 @@ export default function InventoryLogsPage() {
 
                 <button
                     onClick={loadLogs}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-h)] transition hover:bg-[var(--input-bg)]"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm font-semibold text-[var(--text-h)] transition hover:bg-[var(--input-bg)] sm:w-auto"
                 >
                     <RefreshCw size={16} />
                     Refresh
@@ -292,13 +292,13 @@ export default function InventoryLogsPage() {
                         <Filter size={16} className="text-[var(--accent)]" />
                         Filters
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
                         <ExportButtons
                             disabled={visibleLogs.length === 0}
                             onCsv={() => exportToCsv({ title: "Inventory Logs", columns: exportColumns, rows: visibleLogs })}
                             onPdf={() => exportToPdf({ title: "Inventory Logs", subtitle: `${visibleLogs.length} rows matching current filters`, columns: exportColumns, rows: visibleLogs })}
                         />
-                        <button onClick={clearFilters} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-h)] transition hover:bg-[var(--border)]">
+                        <button onClick={clearFilters} className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-2 text-xs font-semibold text-[var(--text-h)] transition hover:bg-[var(--border)]">
                             <X size={14} />
                             Clear filters
                         </button>
@@ -311,7 +311,7 @@ export default function InventoryLogsPage() {
                         <input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search product, SKU, type, reason, or user..."
+                            placeholder="Search product, SKU, type, reason, or member..."
                             className="w-full rounded-lg py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/30"
                         />
                     </div>
@@ -385,7 +385,7 @@ export default function InventoryLogsPage() {
             <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-[var(--shadow)]">
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[760px] text-left text-sm">
-                        <thead className="border-b border-[var(--border)] bg-[var(--input-bg)] text-xs uppercase tracking-wide text-[var(--muted)]">
+                        <thead className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--input-bg)] text-xs uppercase tracking-wide text-[var(--muted)]">
                             <tr>
                                 <th className="px-4 py-3 font-semibold">Date</th>
                                 <th className="px-4 py-3 font-semibold">Product</th>
@@ -451,7 +451,7 @@ export default function InventoryLogsPage() {
                     <p className="text-sm text-[var(--muted)]">
                         Showing {((page - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(page * ITEMS_PER_PAGE, totalItems)} of {totalItems} logs
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
                         <button disabled={page === 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))} className="rounded-lg border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1.5 text-sm transition hover:bg-[var(--border)] disabled:cursor-not-allowed disabled:opacity-50">
                             Previous
                         </button>

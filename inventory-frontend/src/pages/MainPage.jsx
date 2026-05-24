@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import Card from "../components/ui/Card";
 import { useAuth } from "../components/context/AuthContext";
@@ -22,7 +22,8 @@ import { getPageCache, setPageCache } from "../store/pageCache";
 
 export default function MainPage() {
     const { user } = useAuth();
-    const cachedDashboard = getPageCache("dashboard");
+    const cachedDashboardRef = useRef(getPageCache("dashboard"));
+    const cachedDashboard = cachedDashboardRef.current;
     const [products, setProducts] = useState(cachedDashboard?.products || []);
     const [lowStock, setLowStock] = useState(cachedDashboard?.lowStock || []);
     const [categories, setCategories] = useState(cachedDashboard?.categories || []);
@@ -34,12 +35,14 @@ export default function MainPage() {
     const mountedRef = useRef(false);
 
     // Authority Checks
-    const role = user?.role?.replace("ROLE_", "").toUpperCase() || "";
+    const role = useMemo(() => user?.role?.replace("ROLE_", "").toUpperCase() || "", [user?.role]);
+    const userId = user?.id || user?.userID || user?.userId || user?.user_id;
+    const username = user?.username || "";
     const isAdminOrManager = ["ADMIN", "MANAGER"].includes(role);
     const isCashier = role === "CASHIER";
 
     const loadDashboardData = useCallback(async () => {
-        if (!user || loadingRef.current) return;
+        if (!role || loadingRef.current) return;
         loadingRef.current = true;
         try {
             setLoading(true);
@@ -74,10 +77,9 @@ export default function MainPage() {
                         return [];
                     })
                 );
-            } else if (isCashier) {
-                const uId = user.id || user.userID || user.userId || user.user_id;
+            } else if (isCashier && userId) {
                 promises.push(
-                    getSalesByUser(uId).catch(err => {
+                    getSalesByUser(userId).catch(err => {
                         console.error("Failed to load cashier sales for dashboard", err);
                         return [];
                     })
@@ -114,7 +116,7 @@ export default function MainPage() {
                 setLoading(false);
             }
         }
-    }, [isAdminOrManager, isCashier, user]);
+    }, [isAdminOrManager, isCashier, role, userId]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -145,7 +147,7 @@ export default function MainPage() {
                     </h1>
                     <p className="text-sm text-[var(--muted)] mt-1 flex items-center gap-1.5">
                         <UserCheck size={14} className="text-[var(--accent)]" />
-                        Welcome to SariStore IMS control panel, <span className="font-semibold text-[var(--text-h)]">{user?.username || "Guest"}</span> ({role})
+                        Welcome to SariStore IMS control panel, <span className="font-semibold text-[var(--text-h)]">{username || "loading..."}</span> ({role || "loading"})
                     </p>
                 </div>
             </div>

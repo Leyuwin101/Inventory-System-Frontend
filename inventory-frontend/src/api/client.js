@@ -3,7 +3,7 @@ import { clearRequestCache } from "./requestCache";
 import { clearPageCache } from "../store/pageCache";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://saristore-ims-backend.onrender.com";
-const API_TIMEOUT_MS = 30000;
+const API_TIMEOUT_MS = 10000;
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const USER_KEY = "user";
@@ -86,7 +86,9 @@ const isAuthEndpoint = (url = "") => (
 const refreshAccessToken = async () => {
     const refreshToken = getRefreshToken();
     const body = refreshToken ? { refreshToken } : {};
-    const response = await refreshClient.post("/api/auth/refresh", body);
+    const response = await refreshClient.post("/api/auth/refresh", body, {
+        timeout: 8_000,
+    });
     const data = response.data?.data || response.data;
 
     const tokens = {
@@ -98,6 +100,8 @@ const refreshAccessToken = async () => {
     return tokens.accessToken;
 };
 
+export const clearApiSession = clearSession;
+
 const getRefreshPromise = () => {
     if (!refreshPromise) {
         refreshPromise = refreshAccessToken()
@@ -107,7 +111,10 @@ const getRefreshPromise = () => {
             })
             .catch((error) => {
                 resolveFailedQueue(error);
-                logoutOnce();
+                const status = error.response?.status;
+                if (status === 401 || status === 403) {
+                    logoutOnce();
+                }
                 throw error;
             })
             .finally(() => {

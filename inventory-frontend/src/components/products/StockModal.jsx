@@ -24,8 +24,8 @@ export default function StockModal({ open, onClose, onSave, product, loading }) 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="w-full max-w-md p-5 sm:p-6 rounded-xl bg-[var(--card-bg)] border border-[var(--border)]">
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 p-0 sm:items-center sm:p-4">
+            <div className="w-full max-w-md p-4 sm:p-6 rounded-t-2xl sm:rounded-xl bg-[var(--card-bg)] border border-[var(--border)] max-h-[92dvh] overflow-y-auto">
                 {/* HEADER */}
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold text-[var(--text-h)]">
@@ -46,7 +46,7 @@ export default function StockModal({ open, onClose, onSave, product, loading }) 
                 </div>
 
                 {/* MODE SELECTOR */}
-                <div className="flex gap-2 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-4">
                     {["set", "add", "remove"].map((m) => (
                         <button
                             key={m}
@@ -92,7 +92,7 @@ export default function StockModal({ open, onClose, onSave, product, loading }) 
                 </div>
 
                 {/* ACTIONS */}
-                <div className="flex justify-end gap-2 sm:gap-3">
+                <div className="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t border-[var(--border)] bg-[var(--card-bg)] px-4 pt-4 sm:static sm:mx-0 sm:flex-row sm:justify-end sm:gap-3 sm:border-t-0 sm:bg-transparent sm:px-0 sm:pt-0">
                     <button 
                         onClick={onClose}
                         disabled={loading}
@@ -104,7 +104,7 @@ export default function StockModal({ open, onClose, onSave, product, loading }) 
                     <button
                         onClick={handleSave}
                         disabled={loading || qty < 0}
-                        className="px-4 py-2.5 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
+                        className="px-4 py-2.5 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {loading && <Loader2 size={16} className="animate-spin" />}
                         Update Stock

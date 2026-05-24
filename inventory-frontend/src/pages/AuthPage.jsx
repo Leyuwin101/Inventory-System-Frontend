@@ -23,7 +23,7 @@ export default function AuthPage() {
                     font-[var(--sans)]
                     flex items-center justify-center
                     px-3 sm:px-6 lg:px-10
-                    py-4 sm:py-8
+                    py-3 sm:py-8
                 "
             >
                 <motion.div
@@ -32,20 +32,20 @@ export default function AuthPage() {
                     transition={{ duration: 0.4 }}
                     className="
                         w-full max-w-6xl
-                        min-h-[88vh]
+                        min-h-[auto] md:min-h-[88vh]
                         flex flex-col md:flex-row
                         border border-[var(--border)]
                         shadow-[0_30px_90px_-35px_rgba(0,0,0,0.75)]
-                        rounded-2xl
+                        rounded-xl sm:rounded-2xl
                         overflow-hidden
                         bg-[var(--card-bg)]
                     "
                 >
-                    <div className="w-full md:w-1/2 flex items-center justify-center px-4 py-8 sm:px-8">
+                    <div className="w-full md:w-1/2 flex items-center justify-center px-3 py-5 sm:px-8 sm:py-8">
                         <AuthForm />
                     </div>
 
-                    <div className="w-full md:w-1/2 flex min-h-[50vh] md:min-h-full">
+                    <div className="hidden w-full md:w-1/2 md:flex min-h-[50vh] md:min-h-full">
                         <AuthVisualPanel />
                     </div>
                 </motion.div>

@@ -1,4 +1,4 @@
-import React from "react";
+import { Link } from "react-router-dom";
 import { Folder, ArrowRight } from "lucide-react";
 
 export default function CategoryBreakdown({ products = [], categories = [] }) {
@@ -60,8 +60,8 @@ export default function CategoryBreakdown({ products = [], categories = [] }) {
                 })}
             </div>
 
-            <a 
-                href="/inventory" 
+            <Link
+                to="/inventory"
                 className="
                     mt-4 pt-3 border-t border-[var(--border)]
                     text-xs font-medium text-[var(--accent)] hover:underline
@@ -70,7 +70,7 @@ export default function CategoryBreakdown({ products = [], categories = [] }) {
             >
                 Manage stock categories
                 <ArrowRight size={12} />
-            </a>
+            </Link>
         </div>
     );
 }

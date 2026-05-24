@@ -223,7 +223,7 @@ export default function SalesLedger({ sales, isAdminOrManager, onCancelSale }) {
                                     <td className="p-4 text-xs">
                                         <div>
                                             <div className="font-semibold text-[var(--text-h)]">{sale.cashierName || sale.username || "Staff Cashier"}</div>
-                                            <span className="text-[9px] text-[var(--muted)]">User ID: {sale.userId || sale.user_id || 1}</span>
+                                            <span className="text-[9px] text-[var(--muted)]">Member ID: {sale.userId || sale.user_id || 1}</span>
                                         </div>
                                     </td>
 
@@ -287,7 +287,7 @@ export default function SalesLedger({ sales, isAdminOrManager, onCancelSale }) {
                         >
                             Previous
                         </button>
-                        <span className="text-sm text-[var(--muted)]">{currentPage} / {totalPages}</span>
+                        <span className="min-w-14 text-center text-sm text-[var(--muted)]">{currentPage} / {totalPages}</span>
                         <button
                             type="button"
                             onClick={() => setPage((value) => Math.min(totalPages, value + 1))}

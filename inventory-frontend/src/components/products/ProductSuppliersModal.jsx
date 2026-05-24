@@ -107,8 +107,8 @@ export default function ProductSuppliersModal({ open, onClose, product, onUpdate
     );
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="w-full max-w-2xl p-6 rounded-xl bg-[var(--card-bg)] border border-[var(--border)] max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 p-0 sm:items-center sm:p-4">
+            <div className="w-full max-w-2xl p-4 sm:p-6 rounded-t-2xl sm:rounded-xl bg-[var(--card-bg)] border border-[var(--border)] max-h-[92dvh] overflow-y-auto shadow-2xl">
                 {/* HEADER */}
                 <div className="flex items-center justify-between mb-5 border-b border-[var(--border)] pb-3">
                     <div className="flex items-center gap-3">
@@ -153,7 +153,7 @@ export default function ProductSuppliersModal({ open, onClose, product, onUpdate
                             ) : (
                                 <div className="w-full overflow-x-auto rounded-lg border border-[var(--border)]">
                                     <table className="w-full text-xs text-left">
-                                        <thead className="text-[var(--muted)] border-b border-[var(--border)] bg-[var(--input-bg)]">
+                                        <thead className="sticky top-0 z-10 text-[var(--muted)] border-b border-[var(--border)] bg-[var(--input-bg)]">
                                             <tr>
                                                 <th className="p-3 font-medium">Supplier</th>
                                                 <th className="p-3 font-medium">Supply Price</th>
@@ -268,7 +268,7 @@ export default function ProductSuppliersModal({ open, onClose, product, onUpdate
                                             type="submit"
                                             disabled={modalLoading || !form.supplierId || !form.price}
                                             className="
-                                                flex items-center justify-center p-2 rounded-lg
+                                                flex min-h-11 min-w-11 items-center justify-center p-2 rounded-lg
                                                 bg-[var(--accent)] text-[var(--accent-text)] hover:opacity-90 transition disabled:opacity-50
                                             "
                                         >
