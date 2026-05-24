@@ -1,22 +1,23 @@
+import { memo, useMemo } from "react";
 import { Package, Layers, Wallet, TrendingUp, AlertTriangle } from "lucide-react";
 
 const formatMoney = (value) => `PHP ${Number(value || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export default function StatsGrid({ products = [], sales = [], lowStockCount = 0, summary = null }) {
-    const totalProducts = products.length;
-    const totalStock = products.reduce((sum, p) => sum + (Number(p.stock_quantity ?? p.stock) || 0), 0);
-    const totalValue = products.reduce((sum, p) => sum + ((Number(p.price) || 0) * (Number(p.stock_quantity ?? p.stock) || 0)), 0);
+function StatsGrid({ products = [], sales = [], lowStockCount = 0, summary = null }) {
+    const statCards = useMemo(() => {
+        const totalProducts = products.length;
+        const totalStock = products.reduce((sum, p) => sum + (Number(p.stock_quantity ?? p.stock) || 0), 0);
+        const totalValue = products.reduce((sum, p) => sum + ((Number(p.price) || 0) * (Number(p.stock_quantity ?? p.stock) || 0)), 0);
+        const todayStr = new Date().toDateString();
+        const salesToday = sales.filter((s) => {
+            const dateStr = s.saleDate || s.createdDate || s.timestamp || s.sale_date;
+            const isCancelled = s.status === "CANCELLED" || s.status === "REFUNDED" || s.refunded || s.cancelled;
+            return dateStr && new Date(dateStr).toDateString() === todayStr && !isCancelled;
+        });
+        const revenueToday = salesToday.reduce((sum, s) => sum + (Number(s.totalPrice || s.total_price || s.total || 0)), 0);
+        const effectiveLowStock = Number(summary?.lowStockCount ?? lowStockCount ?? 0);
 
-    const todayStr = new Date().toDateString();
-    const salesToday = sales.filter((s) => {
-        const dateStr = s.saleDate || s.createdDate || s.timestamp || s.sale_date;
-        const isCancelled = s.status === "CANCELLED" || s.status === "REFUNDED" || s.refunded || s.cancelled;
-        return dateStr && new Date(dateStr).toDateString() === todayStr && !isCancelled;
-    });
-    const revenueToday = salesToday.reduce((sum, s) => sum + (Number(s.totalPrice || s.total_price || s.total || 0)), 0);
-    const effectiveLowStock = Number(summary?.lowStockCount ?? lowStockCount ?? 0);
-
-    const statCards = [
+        return [
         {
             title: summary ? "Total Sales" : "Unique Products",
             value: summary ? formatMoney(summary.totalSales) : totalProducts.toLocaleString(),
@@ -54,7 +55,8 @@ export default function StatsGrid({ products = [], sales = [], lowStockCount = 0
                 ? "text-rose-400 border-rose-500/30 bg-rose-500/10 animate-pulse"
                 : "text-gray-400 border-[var(--border)] bg-[var(--card-bg)]",
         },
-    ];
+        ];
+    }, [lowStockCount, products, sales, summary]);
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
@@ -89,3 +91,5 @@ export default function StatsGrid({ products = [], sales = [], lowStockCount = 0
         </div>
     );
 }
+
+export default memo(StatsGrid);

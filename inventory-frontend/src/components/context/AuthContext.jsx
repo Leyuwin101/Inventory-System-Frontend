@@ -2,14 +2,22 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { clearAuthCache, getCurrentUser } from "../../api/auth.js";
 import { clearRequestCache } from "../../api/requestCache.js";
 import { clearPageCache } from "../../store/pageCache.js";
-import { clearTokens, setTokens } from "../../api/token.js";
+import { clearTokens, getRefreshToken, getToken, setTokens } from "../../api/token.js";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);
-    const [authLoading, setAuthLoading] = useState(true);
-    const [authHydrated, setAuthHydrated] = useState(false);
+    const [user, setUser] = useState(() => {
+        try {
+            return getToken() || getRefreshToken()
+                ? JSON.parse(localStorage.getItem("user") || "null")
+                : null;
+        } catch {
+            return null;
+        }
+    });
+    const [authLoading, setAuthLoading] = useState(() => Boolean(getToken() || getRefreshToken()));
+    const [authHydrated, setAuthHydrated] = useState(() => Boolean(getToken() || getRefreshToken()));
     const mountedRef = useRef(false);
     const hydrationPromiseRef = useRef(null);
 
@@ -62,7 +70,6 @@ export function AuthProvider({ children }) {
 
                 return currentUser;
             } catch (err) {
-                console.error("Auth hydration failed:", err);
                 const status = err.response?.status;
                 const storedUser = localStorage.getItem("user");
                 let fallbackUser;
@@ -70,6 +77,12 @@ export function AuthProvider({ children }) {
                     fallbackUser = storedUser ? JSON.parse(storedUser) : null;
                 } catch {
                     fallbackUser = null;
+                }
+
+                if (err.code === "ECONNABORTED" && fallbackUser) {
+                    console.warn("Auth hydration timed out; continuing with cached session while the backend recovers.");
+                } else {
+                    console.error("Auth hydration failed:", err);
                 }
 
                 if (mountedRef.current) {

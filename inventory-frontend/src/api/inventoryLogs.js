@@ -41,7 +41,7 @@ export const getInventoryLogs = async ({
             page: (data?.page ?? 0) + 1,
             limit: data?.limit ?? limit,
         };
-    });
+    }, { ttl: 45_000, staleTtl: 5 * 60_000 });
 };
 
 const createInventoryLog = async (path, payload) => {

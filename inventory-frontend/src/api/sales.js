@@ -9,7 +9,7 @@ export const getAllSales = async () => {
     return cachedRequest("sales:all", async () => {
         const res = await api.get("/api/sales");
         return asArray(res.data).map(normalizeSale);
-    });
+    }, { ttl: 45_000, staleTtl: 5 * 60_000 });
 };
 
 /**
@@ -19,7 +19,7 @@ export const getSaleById = async (id) => {
     return cachedRequest(`sales:detail:${id}`, async () => {
         const res = await api.get(`/api/sales/${id}`);
         return normalizeSale(unwrapApiData(res.data));
-    });
+    }, { ttl: 60_000, staleTtl: 5 * 60_000 });
 };
 
 /**
@@ -29,7 +29,7 @@ export const getSalesByUser = async (userId) => {
     return cachedRequest(`sales:user:${userId}`, async () => {
         const res = await api.get(`/api/sales/user/${userId}`);
         return asArray(res.data).map(normalizeSale);
-    });
+    }, { ttl: 45_000, staleTtl: 5 * 60_000 });
 };
 
 /**

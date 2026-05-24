@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
-import { getAllProducts, createProduct, updateProduct, deleteProduct, updateStock } from "../api/products";
+import { getAllProducts, createProduct, updateProduct, deleteProduct, updateStock, mergeProductIntoCache } from "../api/products";
 import { getAllCategories } from "../api/categories";
 import ProductTable from "../components/products/ProductTable";
 import Toolbar from "../components/products/Toolbar";
@@ -183,20 +183,40 @@ export default function ProductPage() {
         setIsSuppliersModalOpen(true);
     }, []);
 
+    const commitProducts = useCallback((updater) => {
+        setAllProducts((prev) => {
+            const next = typeof updater === "function" ? updater(prev) : updater;
+            setPageCache("products:all-page", { products: next, categories });
+            return next;
+        });
+    }, [categories]);
+
     const handleSaveProduct = async (id, payload) => {
+        const previousProducts = allProducts;
         try {
             setModalLoading(true);
             if (id) {
-                await updateProduct(id, payload);
+                commitProducts((prev) => prev.map((product) => (
+                    (product.id ?? product.productId ?? product.product_id) === id
+                        ? { ...product, ...payload }
+                        : product
+                )));
+                const updated = await updateProduct(id, payload);
+                commitProducts((prev) => prev.map((product) => (
+                    (product.id ?? product.productId ?? product.product_id) === id ? updated : product
+                )));
+                mergeProductIntoCache(updated, previousProducts);
             } else {
-                await createProduct(payload);
+                const created = await createProduct(payload);
+                commitProducts((prev) => [created, ...prev]);
+                mergeProductIntoCache(created, previousProducts);
             }
-            clearPageCache("products:");
             clearPageCache("dashboard");
             setIsProductModalOpen(false);
-            loadProducts({ force: true });
+            window.setTimeout(() => loadProducts({ force: true }), 0);
         } catch (err) {
             console.error(err);
+            commitProducts(previousProducts);
             alert(err.response?.data?.message || "Failed to save product");
         } finally {
             setModalLoading(false);
@@ -204,15 +224,25 @@ export default function ProductPage() {
     };
 
     const handleSaveStock = async (id, quantity) => {
+        const previousProducts = allProducts;
         try {
             setModalLoading(true);
-            await updateStock(id, quantity);
-            clearPageCache("products:");
+            commitProducts((prev) => prev.map((product) => (
+                (product.id ?? product.productId ?? product.product_id) === id
+                    ? { ...product, stockQuantity: quantity, stock_quantity: quantity }
+                    : product
+            )));
+            const updated = await updateStock(id, quantity);
+            commitProducts((prev) => prev.map((product) => (
+                (product.id ?? product.productId ?? product.product_id) === id ? updated : product
+            )));
+            mergeProductIntoCache(updated, previousProducts);
             clearPageCache("dashboard");
             setIsStockModalOpen(false);
-            loadProducts({ force: true });
+            window.setTimeout(() => loadProducts({ force: true }), 0);
         } catch (err) {
             console.error(err);
+            commitProducts(previousProducts);
             alert(err.response?.data?.message || "Failed to update stock");
         } finally {
             setModalLoading(false);
@@ -221,15 +251,20 @@ export default function ProductPage() {
 
     const handleConfirmDelete = async () => {
         if (!selectedProduct) return;
+        const previousProducts = allProducts;
         try {
             setModalLoading(true);
-            await deleteProduct(selectedProduct.product_id);
-            clearPageCache("products:");
+            const selectedId = selectedProduct.id ?? selectedProduct.productId ?? selectedProduct.product_id;
+            commitProducts((prev) => prev.filter((product) => (
+                (product.id ?? product.productId ?? product.product_id) !== selectedId
+            )));
+            await deleteProduct(selectedId);
             clearPageCache("dashboard");
             setIsDeleteModalOpen(false);
-            loadProducts({ force: true });
+            window.setTimeout(() => loadProducts({ force: true }), 0);
         } catch (err) {
             console.error(err);
+            commitProducts(previousProducts);
             alert(err.response?.data?.message || "Failed to delete product");
         } finally {
             setModalLoading(false);
@@ -263,6 +298,7 @@ export default function ProductPage() {
         {/* SEARCH TOOLBAR */}
         <div className="mb-4 sm:mb-6">
             <Toolbar
+                query={search}
                 onSearch={handleSearch}
                 onCreate={handleCreateProduct}
                 filters={filters}

@@ -1,9 +1,10 @@
-import { useState, useCallback } from "react";
+import { memo, useCallback } from "react";
 import { Search, Plus, Filter, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import ExportButtons from "../ui/ExportButtons";
 
-export default function ProductToolbar({
+function ProductToolbar({
+    query,
     onSearch,
     onCreate,
     filters,
@@ -15,11 +16,9 @@ export default function ProductToolbar({
     exportDisabled,
 }) {
     const { user } = useAuth();
-    const [query, setQuery] = useState("");
 
     const handleChange = useCallback((e) => {
         const value = e.target.value;
-        setQuery(value);
         onSearch(value);
     }, [onSearch]);
 
@@ -122,3 +121,5 @@ export default function ProductToolbar({
         </div>
     );
 }
+
+export default memo(ProductToolbar);

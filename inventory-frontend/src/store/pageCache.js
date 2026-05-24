@@ -1,11 +1,15 @@
 const pageCache = new Map();
 const STORAGE_PREFIX = "ims:page-cache:";
+const DEFAULT_TTL = 15 * 60_000;
 
 const canUseStorage = () => typeof window !== "undefined" && window.sessionStorage;
 
-export const getPageCache = (key) => {
+export const getPageCache = (key, { ttl = DEFAULT_TTL } = {}) => {
     const cached = pageCache.get(key);
-    if (cached) return cached;
+    if (cached) {
+        if (!ttl || Date.now() - cached.cachedAt <= ttl) return cached;
+        pageCache.delete(key);
+    }
 
     if (!canUseStorage()) return undefined;
 
@@ -14,6 +18,10 @@ export const getPageCache = (key) => {
         if (!stored) return undefined;
 
         const parsed = JSON.parse(stored);
+        if (ttl && Date.now() - parsed.cachedAt > ttl) {
+            window.sessionStorage.removeItem(`${STORAGE_PREFIX}${key}`);
+            return undefined;
+        }
         pageCache.set(key, parsed);
         return parsed;
     } catch {

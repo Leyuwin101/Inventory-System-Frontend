@@ -1,6 +1,8 @@
 import { api } from "./client";
 import { asArray, normalizeProduct, toProductRequest, unwrapApiData } from "./normalizers";
-import { cachedRequest, invalidateCache } from "./requestCache";
+import { cachedRequest, invalidateCache, mutateCache } from "./requestCache";
+
+export const PRODUCTS_ALL_CACHE_KEY = "products:all";
 
 /**
  * Get all products with pagination
@@ -24,17 +26,17 @@ export const getProducts = async (page = 1, limit = 10, search = "") => {
             totalItems: data?.totalItems ?? data?.totalElements ?? products.length,
             totalPages: data?.totalPages ?? 1,
         };
-    });
+    }, { ttl: 90_000, staleTtl: 10 * 60_000 });
 };
 
 /**
  * Get all products (legacy, no pagination)
  */
 export const getAllProducts = async () => {
-    return cachedRequest("products:all", async () => {
+    return cachedRequest(PRODUCTS_ALL_CACHE_KEY, async () => {
         const res = await api.get("/api/products");
         return asArray(res.data).map(normalizeProduct);
-    });
+    }, { ttl: 2 * 60_000, staleTtl: 20 * 60_000 });
 };
 
 /**
@@ -44,7 +46,7 @@ export const getProductById = async (id) => {
     return cachedRequest(`products:detail:${id}`, async () => {
         const res = await api.get(`/api/products/${id}`);
         return normalizeProduct(unwrapApiData(res.data));
-    });
+    }, { ttl: 2 * 60_000, staleTtl: 15 * 60_000 });
 };
 
 /**
@@ -88,6 +90,17 @@ export const updateStock = async (id, quantity) => {
     invalidateCache("inventory-logs:");
     invalidateCache("dashboard:");
     return normalizeProduct(unwrapApiData(res.data));
+};
+
+export const mergeProductIntoCache = (product, fallbackRows = []) => {
+    mutateCache(PRODUCTS_ALL_CACHE_KEY, (current = []) => {
+        const rows = Array.isArray(current) && current.length ? current : fallbackRows;
+        const id = product.id ?? product.productId ?? product.product_id;
+        const exists = rows.some((row) => (row.id ?? row.productId ?? row.product_id) === id);
+        return exists
+            ? rows.map((row) => ((row.id ?? row.productId ?? row.product_id) === id ? { ...row, ...product } : row))
+            : [product, ...rows];
+    });
 };
 
 /**

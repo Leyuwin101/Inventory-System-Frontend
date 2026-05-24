@@ -9,7 +9,7 @@ export const getAllCategories = async () => {
     return cachedRequest("categories:all", async () => {
         const res = await api.get("/api/categories");
         return asArray(res.data).map(normalizeCategory);
-    });
+    }, { ttl: 10 * 60_000, staleTtl: 60 * 60_000 });
 };
 
 /**
@@ -19,7 +19,7 @@ export const getCategoryById = async (id) => {
     return cachedRequest(`categories:detail:${id}`, async () => {
         const res = await api.get(`/api/categories/${id}`);
         return normalizeCategory(unwrapApiData(res.data));
-    });
+    }, { ttl: 10 * 60_000, staleTtl: 60 * 60_000 });
 };
 
 /**

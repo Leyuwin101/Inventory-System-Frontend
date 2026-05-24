@@ -130,13 +130,195 @@ const getTable = (reportId, data = {}) => {
     };
 };
 
-const getChartValues = (reportId, data = {}) => {
-    if (reportId === "sales-summary") return (data.chartRows || []).map((row) => Number(row.sales || 0));
-    if (reportId === "inventory-movement") return (data.chartRows || []).map((row) => Number(row.stockIn || row.quantity || 0) + Number(row.stockOut || 0));
-    if (reportId === "low-stock") return (data.chartRows || []).map((row) => Number(row.stockQuantity ?? row.stock_quantity ?? 0));
-    if (reportId === "category-performance") return (data.chartRows || []).map((row) => Number(row.revenue || 0));
-    return (data.chartRows || []).map((row) => Number(row.contributionAmount || 0));
+const getChartRows = (reportId, data = {}) => {
+    const rows = data.chartRows || [];
+
+    if (reportId === "sales-summary") {
+        const source = rows.length ? rows : data.tableRows || [];
+        return source.slice(0, 12).map((row, index) => ({
+            label: row.label || row.date || row.saleDate || row.createdAt || `Sale ${index + 1}`,
+            value: Number(row.sales || row.totalSales || row.totalPrice || row.totalAmount || row.total || 0),
+            tone: "emerald",
+        }));
+    }
+
+    if (reportId === "inventory-movement") {
+        if (rows.length) {
+            return rows.slice(0, 12).map((row, index) => ({
+                label: row.label || row.date || row.createdAt || `Movement ${index + 1}`,
+                value: Number(row.stockIn || row.quantity || 0),
+                secondaryValue: Number(row.stockOut || 0),
+                tone: "sky",
+            }));
+        }
+
+        return [
+            { label: "Stock In", value: Number(data.totalStockIn || 0), tone: "emerald" },
+            { label: "Stock Out", value: Number(data.totalStockOut || 0), tone: "rose" },
+            { label: "Adjustments", value: Number(data.totalAdjustments || 0), tone: "amber" },
+        ];
+    }
+
+    if (reportId === "low-stock") {
+        return rows.slice(0, 10).map((row) => ({
+            label: row.name || row.productName || "Product",
+            value: Number(row.stockQuantity ?? row.stock_quantity ?? 0),
+            secondaryValue: Number(row.minimumStock ?? row.minimum_stock ?? 0),
+            tone: "rose",
+        }));
+    }
+
+    if (reportId === "category-performance") {
+        return rows.slice(0, 10).map((row) => ({
+            label: row.categoryName || "Uncategorized",
+            value: Number(row.revenue || 0),
+            secondaryValue: Number(row.productsSold || 0),
+            percentage: Number(row.revenuePercentage || 0),
+            tone: "violet",
+        }));
+    }
+
+    return rows.slice(0, 10).map((row) => ({
+        label: row.supplierName || "Supplier",
+        value: Number(row.contributionAmount || 0),
+        secondaryValue: Number(row.supplierProducts || 0),
+        percentage: Number(row.contributionPercentage || 0),
+        tone: "cyan",
+    }));
 };
+
+const toneClasses = {
+    emerald: "from-emerald-500 to-teal-400 text-emerald-400",
+    sky: "from-sky-500 to-cyan-400 text-sky-400",
+    rose: "from-rose-500 to-red-400 text-rose-400",
+    amber: "from-amber-500 to-orange-400 text-amber-400",
+    violet: "from-violet-500 to-fuchsia-400 text-violet-400",
+    cyan: "from-cyan-500 to-emerald-400 text-cyan-400",
+};
+
+const compactValue = (value, reportId) => (
+    ["sales-summary", "category-performance", "supplier-performance"].includes(reportId)
+        ? money(value)
+        : number(value)
+);
+
+function ReportChart({ reportId, data, loading }) {
+    const rows = useMemo(() => getChartRows(reportId, data), [data, reportId]);
+    const maxValue = Math.max(...rows.map((row) => Math.max(row.value || 0, row.secondaryValue || 0)), 1);
+    const topRow = rows.reduce((best, row) => (row.value > (best?.value || 0) ? row : best), null);
+    const total = rows.reduce((sum, row) => sum + Number(row.value || 0), 0);
+
+    if (loading && rows.length === 0) {
+        return (
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.3fr_0.7fr]">
+                <div className="h-80 animate-pulse rounded-lg border border-[var(--border)] bg-[var(--bg)]" />
+                <div className="space-y-3">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                        <div key={index} className="h-20 animate-pulse rounded-lg border border-[var(--border)] bg-[var(--bg)]" />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (rows.length === 0) {
+        return (
+            <div className="flex h-72 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg)] text-sm text-[var(--muted)]">
+                No chart data available for this report.
+            </div>
+        );
+    }
+
+    const isRankedChart = ["low-stock", "category-performance", "supplier-performance"].includes(reportId);
+
+    return (
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <div className="text-sm font-semibold text-[var(--text-h)]">
+                            {isRankedChart ? "Ranked Performance" : "Trend Overview"}
+                        </div>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                            {rows.length} plotted point{rows.length === 1 ? "" : "s"}
+                        </p>
+                    </div>
+                    {topRow && (
+                        <div className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-right">
+                            <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Peak</div>
+                            <div className="text-sm font-semibold text-[var(--text-h)]">{compactValue(topRow.value, reportId)}</div>
+                        </div>
+                    )}
+                </div>
+
+                {isRankedChart ? (
+                    <div className="space-y-3">
+                        {rows.map((row, index) => {
+                            const width = Math.max(3, (row.value / maxValue) * 100);
+                            const tone = toneClasses[row.tone] || toneClasses.emerald;
+                            return (
+                                <div key={`${row.label}-${index}`} className="grid grid-cols-[minmax(100px,180px)_1fr] items-center gap-3">
+                                    <div className="min-w-0">
+                                        <div className="truncate text-xs font-semibold text-[var(--text-h)]">{row.label}</div>
+                                        <div className="text-[10px] text-[var(--muted)]">
+                                            {reportId === "low-stock"
+                                                ? `Minimum ${number(row.secondaryValue)}`
+                                                : `${number(row.secondaryValue)} item${row.secondaryValue === 1 ? "" : "s"}`}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-8 flex-1 rounded-lg bg-[var(--input-bg)]">
+                                            <div className={`h-8 rounded-lg bg-gradient-to-r ${tone}`} style={{ width: `${width}%` }} />
+                                        </div>
+                                        <div className="w-24 text-right text-xs font-semibold text-[var(--text-h)]">
+                                            {compactValue(row.value, reportId)}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="flex h-72 items-end gap-3">
+                        {rows.map((row, index) => {
+                            const height = Math.max(4, (row.value / maxValue) * 100);
+                            const secondaryHeight = Math.max(0, (row.secondaryValue / maxValue) * 100);
+                            const tone = toneClasses[row.tone] || toneClasses.emerald;
+                            return (
+                                <div key={`${row.label}-${index}`} className="flex h-full flex-1 flex-col justify-end gap-2">
+                                    <div className="flex min-h-0 flex-1 items-end justify-center gap-1 rounded-lg bg-[var(--input-bg)] px-1 pt-2">
+                                        <div className={`w-full rounded-t-md bg-gradient-to-t ${tone}`} style={{ height: `${height}%` }} title={compactValue(row.value, reportId)} />
+                                        {row.secondaryValue > 0 && (
+                                            <div className="w-full rounded-t-md bg-gradient-to-t from-rose-500 to-amber-400" style={{ height: `${secondaryHeight}%` }} title={compactValue(row.secondaryValue, reportId)} />
+                                        )}
+                                    </div>
+                                    <span className="truncate text-center text-[10px] font-semibold text-[var(--muted)]" title={row.label}>
+                                        {String(row.label).slice(0, 10)}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Plotted Total</div>
+                    <div className="mt-2 text-xl font-semibold text-[var(--text-h)]">{compactValue(total, reportId)}</div>
+                </div>
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Top Performer</div>
+                    <div className="mt-2 truncate text-xl font-semibold text-[var(--text-h)]">{topRow?.label || "N/A"}</div>
+                </div>
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Average</div>
+                    <div className="mt-2 text-xl font-semibold text-[var(--text-h)]">{compactValue(total / rows.length, reportId)}</div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function ReportsPage() {
     const cachedReportState = getPageCache("reports:state") || {};
@@ -169,8 +351,6 @@ export default function ReportsPage() {
         if (!query) return table.rows;
         return table.rows.filter((row) => row.some((cell) => String(cell || "").toLowerCase().includes(query)));
     }, [debouncedTableQuery, table.rows]);
-    const chartValues = useMemo(() => getChartValues(activeReport, reportData), [activeReport, reportData]);
-    const maxChartValue = Math.max(...chartValues, 1);
 
     const loadReport = useCallback(async () => {
         try {
@@ -324,14 +504,7 @@ export default function ReportsPage() {
                     </h2>
                 </div>
 
-                <div className="flex h-72 items-end gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
-                    {(chartValues.length ? chartValues : [0]).map((value, index) => (
-                        <div key={`${value}-${index}`} className="flex h-full flex-1 flex-col justify-end gap-2">
-                            <div className="rounded-t-md border border-[var(--border)] bg-[var(--accent)]/80" style={{ height: `${Math.max(4, (value / maxChartValue) * 100)}%` }} />
-                            <span className="text-center text-[10px] font-semibold text-[var(--muted)]">{index + 1}</span>
-                        </div>
-                    ))}
-                </div>
+                <ReportChart reportId={activeReport} data={reportData} loading={loading} />
             </div>
 
             <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-[var(--shadow)]">

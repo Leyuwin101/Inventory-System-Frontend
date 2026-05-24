@@ -104,7 +104,7 @@ const ProductCard = memo(function ProductCard({ product, onEdit, onStock, onDele
     );
 });
 
-export default function ProductTable({ products, loading, onEdit, onStock, onDelete, onSuppliers }) {
+function ProductTable({ products, loading, onEdit, onStock, onDelete, onSuppliers }) {
     if (loading && products.length === 0) {
         return <ProductSkeleton />;
     }
@@ -155,3 +155,5 @@ export default function ProductTable({ products, loading, onEdit, onStock, onDel
         </>
     );
 }
+
+export default memo(ProductTable);

@@ -9,7 +9,7 @@ export const getAllSuppliers = async () => {
     return cachedRequest("suppliers:all", async () => {
         const res = await api.get("/api/suppliers");
         return asArray(res.data).map(normalizeSupplier);
-    });
+    }, { ttl: 5 * 60_000, staleTtl: 30 * 60_000 });
 };
 
 /**
@@ -19,7 +19,7 @@ export const getSupplierById = async (id) => {
     return cachedRequest(`suppliers:detail:${id}`, async () => {
         const res = await api.get(`/api/suppliers/${id}`);
         return normalizeSupplier(unwrapApiData(res.data));
-    });
+    }, { ttl: 5 * 60_000, staleTtl: 30 * 60_000 });
 };
 
 /**

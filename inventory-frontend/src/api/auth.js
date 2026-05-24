@@ -118,7 +118,7 @@ export const getCurrentUser = async () => {
     return cachedRequest("auth:me", async () => {
         const res = await api.get("/api/auth/me");
         return normalizeAuthUser(res.data?.data || res.data);
-    }, { ttl: 120_000, fallbackOnError: false });
+    }, { ttl: 120_000, staleTtl: 5 * 60_000, fallbackOnError: false });
 };
 
 export const updateCurrentUser = async (payload) => {

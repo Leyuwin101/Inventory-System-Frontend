@@ -14,7 +14,8 @@ import {
     Settings,
     LogOut,
     X,
-    ClipboardList
+    ClipboardList,
+    UserCog
 } from "lucide-react";
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -50,6 +51,7 @@ export default function Sidebar({ isOpen, onClose }) {
         {
             title: "SYSTEM",
             items: [
+                { label: "Users", icon: <UserCog size={18} />, path: "/users", roles: ["ADMIN", "MANAGER"] },
                 { label: "Settings", icon: <Settings size={18} />, path: "/settings" }
             ]
         }

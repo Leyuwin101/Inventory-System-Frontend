@@ -10,8 +10,22 @@ export const asArray = (value) => {
     if (Array.isArray(data?.suppliers)) return data.suppliers;
     if (Array.isArray(data?.sales)) return data.sales;
     if (Array.isArray(data?.logs)) return data.logs;
+    if (Array.isArray(data?.users)) return data.users;
     return [];
 };
+
+export const normalizeUser = (user = {}) => ({
+    ...user,
+    id: user.id ?? user.userID ?? user.userId ?? user.user_id,
+    userID: user.userID ?? user.userId ?? user.user_id ?? user.id,
+    userId: user.userId ?? user.userID ?? user.user_id ?? user.id,
+    username: user.username ?? user.name ?? "",
+    name: user.name ?? user.username ?? "",
+    email: user.email ?? "",
+    role: user.role ?? user.authority ?? "",
+    active: user.active ?? user.enabled ?? user.isActive ?? user.status !== "TERMINATED",
+    status: user.status ?? (user.active === false || user.enabled === false ? "TERMINATED" : "ACTIVE"),
+});
 
 export const normalizeCategory = (category = {}) => ({
     ...category,

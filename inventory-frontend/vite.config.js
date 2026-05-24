@@ -9,6 +9,18 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
+  build: {
+    assetsInlineLimit: 4096,
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          icons: ['lucide-react'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     strictPort: true,
