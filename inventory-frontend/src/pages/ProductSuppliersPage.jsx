@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
+import { useAuth } from "../components/context/AuthContext";
 import { assignSupplierToProduct, getAllProducts, removeSupplierFromProduct } from "../api/products";
 import { getAllSuppliers } from "../api/suppliers";
 import { clearPageCache } from "../store/pageCache";
@@ -17,6 +18,9 @@ const PRODUCT_LIST_PAGE_SIZE = 8;
 const ASSIGNED_SUPPLIERS_PAGE_SIZE = 8;
 
 export default function ProductSuppliersPage() {
+    const { user } = useAuth();
+    const role = user?.role?.replace("ROLE_", "").toUpperCase() || "";
+    const canManageProductSuppliers = ["ADMIN", "MANAGER"].includes(role);
     const [products, setProducts] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [selectedProductId, setSelectedProductId] = useState("");
@@ -259,6 +263,7 @@ export default function ProductSuppliersPage() {
                                 <PackageSearch className="text-[var(--accent)]" size={22} />
                             </div>
 
+                            {canManageProductSuppliers && (
                             <form onSubmit={handleAssign} className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_160px_160px_auto] lg:items-end">
                                 <label className="space-y-1.5">
                                     <span className="text-xs font-semibold uppercase text-[var(--muted)]">Supplier</span>
@@ -311,6 +316,7 @@ export default function ProductSuppliersPage() {
                                     Assign
                                 </button>
                             </form>
+                            )}
                         </div>
 
                         <div className="scrollbar-hidden overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-[var(--shadow)]">
@@ -321,13 +327,13 @@ export default function ProductSuppliersPage() {
                                         <th className="p-4 font-medium">Company</th>
                                         <th className="p-4 font-medium">Contract Price</th>
                                         <th className="p-4 font-medium">Lead Time</th>
-                                        <th className="p-4 text-right font-medium">Action</th>
+                                        {canManageProductSuppliers && <th className="p-4 text-right font-medium">Action</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--border)]">
                                     {assignedSuppliers.length === 0 ? (
                                         <tr>
-                                            <td colSpan="5" className="p-8 text-center text-sm text-[var(--muted)]">
+                                            <td colSpan={canManageProductSuppliers ? 5 : 4} className="p-8 text-center text-sm text-[var(--muted)]">
                                                 No suppliers are assigned to this product yet.
                                             </td>
                                         </tr>
@@ -352,6 +358,7 @@ export default function ProductSuppliersPage() {
                                                             {supplier.leadTimeDays || supplier.leadTime || 0} days
                                                         </span>
                                                     </td>
+                                                    {canManageProductSuppliers && (
                                                     <td className="p-4 text-right">
                                                         <button
                                                             type="button"
@@ -363,6 +370,7 @@ export default function ProductSuppliersPage() {
                                                             Remove
                                                         </button>
                                                     </td>
+                                                    )}
                                                 </tr>
                                             );
                                         })

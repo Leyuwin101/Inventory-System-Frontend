@@ -21,7 +21,7 @@ import {
     X,
 } from "lucide-react";
 
-const ROLE_OPTIONS = ["ADMIN", "MANAGER", "INVENTORY_CLERK", "CASHIER"];
+const ROLE_OPTIONS = ["ADMIN", "MANAGER", "INVENTORY_CLERK", "CASHIER", "GUEST"];
 const blankForm = {
     username: "",
     email: "",
@@ -36,6 +36,7 @@ const MEMBERS_PAGE_SIZE = 10;
 export default function UsersPage() {
     const { user: currentUser } = useAuth();
     const currentRole = cleanRole(currentUser?.role);
+    const canManageMembers = ["ADMIN", "MANAGER"].includes(currentRole);
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -248,13 +249,15 @@ export default function UsersPage() {
                     </p>
                 </div>
 
-                <button
-                    onClick={openCreateModal}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] shadow-[var(--shadow)] transition hover:opacity-90 sm:w-auto"
-                >
-                    <Plus size={18} />
-                    Add Member
-                </button>
+                {canManageMembers && (
+                    <button
+                        onClick={openCreateModal}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] shadow-[var(--shadow)] transition hover:opacity-90 sm:w-auto"
+                    >
+                        <Plus size={18} />
+                        Add Member
+                    </button>
+                )}
             </div>
 
             {(error || notice) && (
@@ -328,6 +331,7 @@ export default function UsersPage() {
                                         <span className="inline-flex rounded-full border border-[var(--border)] bg-[var(--input-bg)] px-3 py-1 text-xs font-semibold text-[var(--text-h)]">
                                             {accountRole || "MEMBER"}
                                         </span>
+                                        {canManageMembers && (
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => openEditModal(account)}
@@ -346,6 +350,7 @@ export default function UsersPage() {
                                                 <Trash2 size={17} />
                                             </button>
                                         </div>
+                                        )}
                                     </div>
                                 </article>
                             );
@@ -359,7 +364,7 @@ export default function UsersPage() {
                                 <th className="p-4 font-medium">Email</th>
                                 <th className="p-4 font-medium">Role</th>
                                 <th className="p-4 font-medium">Status</th>
-                                <th className="p-4 text-right font-medium">Actions</th>
+                                {canManageMembers && <th className="p-4 text-right font-medium">Actions</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border)] text-[var(--text)]">
@@ -387,6 +392,7 @@ export default function UsersPage() {
                                                 {isActive ? "Active" : "Terminated"}
                                             </span>
                                         </td>
+                                        {canManageMembers && (
                                         <td className="p-4">
                                             <div className="flex justify-end gap-2">
                                                 <button
@@ -407,6 +413,7 @@ export default function UsersPage() {
                                                 </button>
                                             </div>
                                         </td>
+                                        )}
                                     </tr>
                                 );
                             })}

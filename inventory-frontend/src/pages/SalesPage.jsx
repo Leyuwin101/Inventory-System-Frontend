@@ -40,6 +40,7 @@ export default function SalesPage() {
 
     // Authority Checks
     const isAdminOrManager = ["ADMIN", "MANAGER"].includes(role);
+    const canViewAllSales = ["ADMIN", "MANAGER", "GUEST"].includes(role);
     const canCheckout = ["ADMIN", "CASHIER"].includes(role);
 
     const loadInitialData = useCallback(async () => {
@@ -59,7 +60,7 @@ export default function SalesPage() {
                 promises.push(Promise.resolve([]));
             }
 
-            if (isAdminOrManager) {
+            if (canViewAllSales) {
                 promises.push(getAllSales());
             } else if (currentUser) {
                 const uId = currentUser.id || currentUser.userID || currentUser.userId || currentUser.user_id;
@@ -87,7 +88,7 @@ export default function SalesPage() {
                 setLoading(false);
             }
         }
-    }, [cacheKey, canCheckout, currentUser, isAdminOrManager]);
+    }, [cacheKey, canCheckout, canViewAllSales, currentUser]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -171,7 +172,7 @@ export default function SalesPage() {
                                     : "text-[var(--muted)] hover:text-[var(--text-h)]"
                         }`}
                     >
-                        {isAdminOrManager ? "Revenue Ledger" : "My Sales Log"}
+                        {canViewAllSales ? "Revenue Ledger" : "My Sales Log"}
                     </button>
                 </div>
             </div>

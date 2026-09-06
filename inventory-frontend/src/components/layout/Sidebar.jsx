@@ -18,6 +18,8 @@ import {
     UserCog
 } from "lucide-react";
 
+const VIEWER_ROLES = ["ADMIN", "MANAGER", "INVENTORY_CLERK", "CASHIER", "GUEST"];
+
 export default function Sidebar({ isOpen, onClose }) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -36,22 +38,22 @@ export default function Sidebar({ isOpen, onClose }) {
             items: [
                 { label: "Products", icon: <Package size={18} />, path: "/products" },
                 { label: "Categories", icon: <Boxes size={18} />, path: "/inventory" },
-                { label: "Sales", icon: <ShoppingCart size={18} />, path: "/sales", roles: ["ADMIN", "MANAGER", "CASHIER"] },
-                { label: "Suppliers", icon: <Truck size={18} />, path: "/suppliers", roles: ["ADMIN", "MANAGER", "INVENTORY_CLERK"] },
-                { label: "Product Suppliers", icon: <Handshake size={18} />, path: "/product-suppliers", roles: ["ADMIN", "MANAGER"] }
+                { label: "Sales", icon: <ShoppingCart size={18} />, path: "/sales", roles: VIEWER_ROLES },
+                { label: "Suppliers", icon: <Truck size={18} />, path: "/suppliers", roles: VIEWER_ROLES },
+                { label: "Product Suppliers", icon: <Handshake size={18} />, path: "/product-suppliers", roles: VIEWER_ROLES }
             ]
         },
         {
             title: "REPORTS",
             items: [
-                { label: "Reports", icon: <BarChart3 size={18} />, path: "/reports", roles: ["ADMIN", "MANAGER"] },
-                { label: "Inventory Logs", icon: <ClipboardList size={18} />, path: "/inventory-logs", roles: ["ADMIN", "MANAGER", "INVENTORY_CLERK"] }
+                { label: "Reports", icon: <BarChart3 size={18} />, path: "/reports", roles: VIEWER_ROLES },
+                { label: "Inventory Logs", icon: <ClipboardList size={18} />, path: "/inventory-logs", roles: VIEWER_ROLES }
             ]
         },
         {
             title: "SYSTEM",
             items: [
-                { label: "Members", icon: <UserCog size={18} />, path: "/members", roles: ["ADMIN", "MANAGER"] },
+                { label: "Members", icon: <UserCog size={18} />, path: "/members", roles: VIEWER_ROLES },
                 { label: "Settings", icon: <Settings size={18} />, path: "/settings" }
             ]
         }

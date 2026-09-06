@@ -28,6 +28,7 @@ const ROLE_VALUES = new Set([
     "ROLE_INVENTORY_CLERK",
     "ROLE_STANDARD_USER",
     "ROLE_MEMBER",
+    "ROLE_GUEST",
 ]);
 const isRoleLike = (value = "") => ROLE_VALUES.has(String(value).trim().toUpperCase());
 const firstNonEmail = (...values) => (
@@ -120,9 +121,10 @@ export const isTokenExpired = (token, skewMs = 30_000) => {
  */
 export const login = async (loginId, password) => {
     const identifier = loginId.trim();
+    const loginPassword = identifier.toLowerCase() === "guest" ? "Guest" : password;
     const credentials = identifier.includes("@")
-        ? { email: identifier, password }
-        : { username: identifier, password };
+        ? { email: identifier, password: loginPassword }
+        : { username: identifier, password: loginPassword };
 
     const res = await api.post(
         "/api/auth/login",

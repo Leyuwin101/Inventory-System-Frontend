@@ -39,6 +39,7 @@ export default function MainPage() {
     const userId = user?.id || user?.userID || user?.userId || user?.user_id;
     const username = user?.username || "";
     const isAdminOrManager = ["ADMIN", "MANAGER"].includes(role);
+    const canViewAllSales = ["ADMIN", "MANAGER", "GUEST"].includes(role);
     const isCashier = role === "CASHIER";
 
     const loadDashboardData = useCallback(async () => {
@@ -70,7 +71,7 @@ export default function MainPage() {
             ];
 
             // Sales list based on cashier vs admin/manager
-            if (isAdminOrManager) {
+            if (canViewAllSales) {
                 promises.push(
                     getAllSales().catch(err => {
                         console.error("Failed to load all sales for dashboard", err);
@@ -116,7 +117,7 @@ export default function MainPage() {
                 setLoading(false);
             }
         }
-    }, [isAdminOrManager, isCashier, role, userId]);
+    }, [canViewAllSales, isCashier, role, userId]);
 
     useEffect(() => {
         mountedRef.current = true;

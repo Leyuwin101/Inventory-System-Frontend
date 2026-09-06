@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 const AuthPage = lazy(() => import("./pages/AuthPage"));
+const GuestPage = lazy(() => import("./pages/GuestPage"));
 const MainPage = lazy(() => import("./pages/MainPage"));
 const ProductPage = lazy(() => import("./pages/ProductPage"));
 const CategoryPage = lazy(() => import("./pages/CategoryPage"));
@@ -14,6 +15,7 @@ const ReportsPage = lazy(() => import("./pages/ReportsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const InventoryLogsPage = lazy(() => import("./pages/InventoryLogsPage"));
 const UsersPage = lazy(() => import("./pages/UsersPage"));
+const VIEWER_ROLES = ["ADMIN", "MANAGER", "INVENTORY_CLERK", "CASHIER", "GUEST"];
 
 const PageFallback = () => (
     <div className="min-h-screen bg-[var(--bg)] p-6 text-[var(--text)]">
@@ -36,6 +38,7 @@ export default function App() {
 
                 <Route path="/" element={<Navigate to="/login" replace />} />
                 <Route path="/login" element={<AuthPage />} />
+                <Route path="/guest" element={<GuestPage />} />
 
                 <Route
                     path="/main"
@@ -58,7 +61,7 @@ export default function App() {
                 <Route
                     path="/inventory"
                     element={
-                        <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "INVENTORY_CLERK", "CASHIER"]}>
+                        <ProtectedRoute allowedRoles={VIEWER_ROLES}>
                             <CategoryPage />
                         </ProtectedRoute>
                     }
@@ -67,7 +70,7 @@ export default function App() {
                 <Route
                     path="/suppliers"
                     element={
-                        <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "INVENTORY_CLERK"]}>
+                        <ProtectedRoute allowedRoles={VIEWER_ROLES}>
                             <SuppliersPage />
                         </ProtectedRoute>
                     }
@@ -76,7 +79,7 @@ export default function App() {
                 <Route
                     path="/product-suppliers"
                     element={
-                        <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+                        <ProtectedRoute allowedRoles={VIEWER_ROLES}>
                             <ProductSuppliersPage />
                         </ProtectedRoute>
                     }
@@ -85,7 +88,7 @@ export default function App() {
                 <Route
                     path="/sales"
                     element={
-                        <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "CASHIER"]}>
+                        <ProtectedRoute allowedRoles={VIEWER_ROLES}>
                             <SalesPage />
                         </ProtectedRoute>
                     }
@@ -94,7 +97,7 @@ export default function App() {
                 <Route
                     path="/reports"
                     element={
-                        <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+                        <ProtectedRoute allowedRoles={VIEWER_ROLES}>
                             <ReportsPage />
                         </ProtectedRoute>
                     }
@@ -103,7 +106,7 @@ export default function App() {
                 <Route
                     path="/inventory-logs"
                     element={
-                        <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "INVENTORY_CLERK"]}>
+                        <ProtectedRoute allowedRoles={VIEWER_ROLES}>
                             <InventoryLogsPage />
                         </ProtectedRoute>
                     }
@@ -121,7 +124,7 @@ export default function App() {
                 <Route
                     path="/members"
                     element={
-                        <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+                        <ProtectedRoute allowedRoles={VIEWER_ROLES}>
                             <UsersPage />
                         </ProtectedRoute>
                     }

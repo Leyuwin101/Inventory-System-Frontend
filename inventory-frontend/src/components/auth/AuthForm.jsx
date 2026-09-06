@@ -28,7 +28,8 @@ export default function AuthForm() {
         setLoading(true);
 
         try {
-            const authData = await login(loginId, password);
+            const isGuestLogin = loginId.trim().toLowerCase() === "guest";
+            const authData = await login(loginId, isGuestLogin ? "Guest" : password);
 
             await completeLogin(authData);
 
@@ -90,7 +91,7 @@ export default function AuthForm() {
                     type="text"
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
-                    placeholder="username or example@company.com"
+                    placeholder="username, example@company.com, or Guest"
                 />
 
                 <AuthInput

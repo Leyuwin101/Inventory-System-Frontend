@@ -47,6 +47,8 @@ export default function SettingsPage() {
     const [savingPassword, setSavingPassword] = useState(false);
     const [notice, setNotice] = useState({ type: "", message: "" });
     const memberName = getMemberName(user);
+    const role = user?.role?.replace("ROLE_", "").toUpperCase() || "";
+    const isGuest = role === "GUEST";
 
     useEffect(() => {
         setProfileForm({
@@ -70,6 +72,11 @@ export default function SettingsPage() {
 
     const handleProfileSave = async (event) => {
         event.preventDefault();
+
+        if (isGuest) {
+            showNotice("error", "Guest accounts are read-only.");
+            return;
+        }
 
         if (!profileForm.username.trim()) {
             showNotice("error", "Member name is required.");
@@ -105,6 +112,11 @@ export default function SettingsPage() {
 
     const handlePasswordSave = async (event) => {
         event.preventDefault();
+
+        if (isGuest) {
+            showNotice("error", "Guest accounts are read-only.");
+            return;
+        }
 
         if (!passwordForm.currentPassword) {
             showNotice("error", "Current password is required.");
@@ -201,14 +213,14 @@ export default function SettingsPage() {
                                             <User size={13} />
                                             Member name
                                         </span>
-                                        <input value={profileForm.username} onChange={(e) => updateProfileField("username", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]" />
+                                        <input disabled={isGuest} value={profileForm.username} onChange={(e) => updateProfileField("username", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </label>
                                     <label className="space-y-1.5">
                                         <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                                             <Mail size={13} />
                                             Email
                                         </span>
-                                        <input type="email" value={profileForm.email} onChange={(e) => updateProfileField("email", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]" />
+                                        <input disabled={isGuest} type="email" value={profileForm.email} onChange={(e) => updateProfileField("email", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </label>
                                 </div>
 
@@ -218,7 +230,7 @@ export default function SettingsPage() {
                                 </div>
 
                                 <div className="flex justify-end">
-                                    <button disabled={savingProfile} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] transition hover:opacity-95 disabled:opacity-60 sm:w-auto">
+                                    <button disabled={savingProfile || isGuest} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
                                         {savingProfile && <Loader2 size={16} className="animate-spin" />}
                                         Save profile
                                     </button>
@@ -243,22 +255,22 @@ export default function SettingsPage() {
                             <form onSubmit={handlePasswordSave} className="space-y-4">
                                 <label className="space-y-1.5">
                                     <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Current password</span>
-                                    <input type={showPasswords ? "text" : "password"} value={passwordForm.currentPassword} onChange={(e) => updatePasswordField("currentPassword", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]" />
+                                    <input disabled={isGuest} type={showPasswords ? "text" : "password"} value={passwordForm.currentPassword} onChange={(e) => updatePasswordField("currentPassword", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60" />
                                 </label>
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <label className="space-y-1.5">
                                         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">New password</span>
-                                        <input type={showPasswords ? "text" : "password"} value={passwordForm.newPassword} onChange={(e) => updatePasswordField("newPassword", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]" />
+                                        <input disabled={isGuest} type={showPasswords ? "text" : "password"} value={passwordForm.newPassword} onChange={(e) => updatePasswordField("newPassword", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </label>
                                     <label className="space-y-1.5">
                                         <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Confirm password</span>
-                                        <input type={showPasswords ? "text" : "password"} value={passwordForm.confirmPassword} onChange={(e) => updatePasswordField("confirmPassword", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)]" />
+                                        <input disabled={isGuest} type={showPasswords ? "text" : "password"} value={passwordForm.confirmPassword} onChange={(e) => updatePasswordField("confirmPassword", e.target.value)} className="w-full rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60" />
                                     </label>
                                 </div>
 
                                 <div className="flex justify-end">
-                                    <button disabled={savingPassword} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] transition hover:opacity-95 disabled:opacity-60 sm:w-auto">
+                                    <button disabled={savingPassword || isGuest} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--accent-text)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
                                         {savingPassword && <Loader2 size={16} className="animate-spin" />}
                                         Validate password change
                                     </button>
